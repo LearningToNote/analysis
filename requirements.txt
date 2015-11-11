@@ -1,4 +1,4 @@
+wheel
 numpy
 scipy
-wheel
 scikit-learn
