@@ -5,7 +5,7 @@ import sys
 
 from sklearn import metrics
 from sklearn.pipeline import Pipeline, FeatureUnion
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.svm import LinearSVC
 from sklearn.base import BaseEstimator, TransformerMixin
 
@@ -97,30 +97,35 @@ sentences, targets = read_sentences(sys.argv[1])
 train_sentences, test_sentences = sentences[:int(0.7*len(sentences))], sentences[int(0.7*len(sentences)):]
 train_targets, test_targets = targets[:int(0.7*len(targets))], targets[int(0.7*len(targets)):]
 
+stop_words = loadStopWords()
+
 pipeline = Pipeline([
     ('sentence_parts', SentencePartExtractor()),
 
     ('union', FeatureUnion(
         transformer_list=[
-            ('subject', Pipeline([
+            ('before', Pipeline([
                 ('selector', ItemSelector(key='before')),
-                ('count_before', CountVectorizer(stop_words = loadStopWords())),
+                ('features_before', FeatureUnion([
+                    ('count_before', CountVectorizer(stop_words = stop_words)),
+                    ('tf_idf_before', TfidfVectorizer(stop_words = stop_words))
+                ]))
             ])),
-            ('subject', Pipeline([
+            ('between', Pipeline([
                 ('selector', ItemSelector(key='between')),
-                ('count_between', CountVectorizer(stop_words = loadStopWords())),
+                ('features_between', FeatureUnion([
+                    ('count_between', CountVectorizer(stop_words = stop_words)),
+                    ('tf_idf_between', TfidfVectorizer(stop_words = stop_words))
+                ]))
             ])),
-            ('subject', Pipeline([
+            ('after', Pipeline([
                 ('selector', ItemSelector(key='after')),
-                ('count_after', CountVectorizer(stop_words = loadStopWords())),
-            ])),
-
-        ],
-        transformer_weights={
-            'count_before': 0.5,
-            'count_between': 2.0,
-            'count_after': 0.5,
-        },
+                ('features_after', FeatureUnion([
+                    ('count_after', CountVectorizer(stop_words = stop_words)),
+                    ('tf_idf_after', TfidfVectorizer(stop_words = stop_words))
+                ]))
+            ]))
+        ]
     )),
     ('clf', LinearSVC())
 ])
