@@ -4,10 +4,28 @@ import collections
 import sys
 
 from sklearn import metrics
-from sklearn.pipeline import Pipeline
+from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.svm import LinearSVC
+from sklearn.base import BaseEstimator, TransformerMixin
 
+
+def loadStopWords():
+    stops = []
+    with open('stop-word-list.txt', 'r') as f:
+        for line in f:
+            stops.append(line.translate(None, '\r\n'))
+    return stops
+
+class ItemSelector(BaseEstimator, TransformerMixin):
+    def __init__(self, key):
+        self.key = key
+
+    def fit(self, x, y=None):
+        return self
+
+    def transform(self, data_dict):
+        return data_dict[self.key]
 
 
 def words_before(sentence, e1_offsets, e2_offsets):
@@ -31,57 +49,99 @@ def get_offsets(entity):
         result.append((offsets[i], offsets[i+1]))
     return result
 
+class SentencePartExtractor(BaseEstimator, TransformerMixin):
+    def fit(self, x, y=None):
+        return self
 
-def between_pairs(filepath):
-        sentences = []
-        for filename in os.listdir(filepath):
-           if (".xml" in filename):
-                tree = ET.parse(filepath+filename)
-                root = tree.getroot()
+    def transform(self, triples):
+        features = {}
+        features['before'] = []
+        features['between'] = []
+        features['after'] = []
+        for sentence, e1_offsets, e2_offsets in triples:
+            features['before'].append(words_before(sentence, e1_offsets, e2_offsets))
+            features['between'].append(words_between(sentence, e1_offsets, e2_offsets))
+            features['after'].append(words_after(sentence, e1_offsets, e2_offsets))
 
-                for document in root.iter('document'):
-                    for sentence in document.findall('sentence'):
-                        entities = sentence.findall('entity')
-                        text = sentence.get('text')
-                        for pair in sentence.findall('pair'):
-                            pair_e1 = pair.get('e1')
-                            pair_e2 = pair.get('e2')
-                            e1 = filter(lambda x: x.get('id') == pair_e1, entities)[0]
-                            e2 = filter(lambda x: x.get('id') == pair_e2, entities)[0]
+        return features
 
-                            e1_offsets = get_offsets(e1)
-                            e2_offsets = get_offsets(e2)
 
-                            a = words_before(text, e1_offsets, e2_offsets)
-                            b = words_between(text, e1_offsets, e2_offsets)
-                            c = words_after(text, e1_offsets, e2_offsets)
+def read_sentences(filepath):
+    sentences = []
+    targets = []
 
-                            print text
-                            text1 = e1.get('text')
-                            text2 = e2.get('text')
-                            print "{} ({}) {} ({}) {}".format(a, text1, b, text2, c)
-                            print
+    for filename in os.listdir(filepath):
+       if (".xml" in filename):
+            tree = ET.parse(filepath+filename)
+            root = tree.getroot()
 
-                            # pair_text = pair_text.strip(' ,.:!;?')
-                            #
-                            # sentences.append((pair_text, pair.get('ddi') == "true"))
-                            # if filename == 'Aprepitant_ddi.xml':
-                            #     print text
-                            #     print e1.get('text')
-                            #     print e2.get('text')
-                            #     print pair_text
-                            #     print begin, end
+            for document in root.iter('document'):
+                for sentence in document.findall('sentence'):
+                    entities = sentence.findall('entity')
+                    text = sentence.get('text')
+                    for pair in sentence.findall('pair'):
+                        pair_e1 = pair.get('e1')
+                        pair_e2 = pair.get('e2')
+                        e1 = filter(lambda x: x.get('id') == pair_e1, entities)[0]
+                        e2 = filter(lambda x: x.get('id') == pair_e2, entities)[0]
 
-        return sentences
+                        e1_offsets = get_offsets(e1)
+                        e2_offsets = get_offsets(e2)
 
-between_pairs(sys.argv[1])
+                        sentences.append((text, e1_offsets, e2_offsets))
+                        targets.append(pair.get('ddi') == "true")
 
-# def loadStopWords():
-#     stops = []
-#     with open('stop-word-list.txt', 'r') as f:
-#         for line in f:
-#             stops.append(line.translate(None, '\r\n'))
-#     return stops
+    return sentences, targets
+
+
+
+
+
+
+
+
+sentences, targets = read_sentences(sys.argv[1])
+train_sentences, test_sentences = sentences[:int(0.7*len(sentences))], sentences[int(0.7*len(sentences)):]
+train_targets, test_targets = targets[:int(0.7*len(targets))], targets[int(0.7*len(targets)):]
+
+pipeline = Pipeline([
+    ('sentence_parts', SentencePartExtractor()),
+
+    ('union', FeatureUnion(
+        transformer_list=[
+            ('subject', Pipeline([
+                ('selector', ItemSelector(key='before')),
+                ('count_before', CountVectorizer(stop_words = loadStopWords())),
+            ])),
+            ('subject', Pipeline([
+                ('selector', ItemSelector(key='between')),
+                ('count_between', CountVectorizer(stop_words = loadStopWords())),
+            ])),
+            ('subject', Pipeline([
+                ('selector', ItemSelector(key='after')),
+                ('count_after', CountVectorizer(stop_words = loadStopWords())),
+            ])),
+
+        ],
+        transformer_weights={
+            'count_before': 0.5,
+            'count_between': 2.0,
+            'count_after': 0.5,
+        },
+    )),
+    ('clf', LinearSVC())
+])
+
+
+pipeline.fit(train_sentences, train_targets)
+
+print 'Predicting...'
+predicted = pipeline.predict(test_sentences)
+
+
+print(metrics.classification_report(test_targets, predicted))
+
+
 #
 #
 # filepath = sys.argv[1]
