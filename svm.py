@@ -3,14 +3,18 @@ import os
 import collections
 import sys
 
+import numpy as np
+import matplotlib.pyplot as plt
 from sklearn import metrics
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.svm import LinearSVC
 from sklearn.base import BaseEstimator, TransformerMixin
 
+import pdb
+
 ######### READ AND SPLIT SENTENCES #########
-def read_sentences(filepath):
+def read_sentences(filepath, interaction_type):
     sentences = []
     targets = []
 
@@ -32,20 +36,35 @@ def read_sentences(filepath):
                         e1_offsets = get_offsets(e1)
                         e2_offsets = get_offsets(e2)
 
+                        text = replaceEntity(text, e1_offsets)
+                        text = replaceEntity(text, e2_offsets)
+
                         sentences.append((text, e1_offsets, e2_offsets))
-                        targets.append(pair.get('ddi') == "true")
+                        targets.append(pair.get('ddi') == "true" and
+                            pair.get('type') == interaction_type)
     return sentences, targets
 
+def replaceEntity(text, offsets):
+    for offset in offsets:
+        text = text[:offset[0]] +\
+            (offset[1] - offset[0] + 1)*'#' +\
+            text[offset[1] + 1:]
+    return text
+
+
 def words_before(sentence, e1_offsets, e2_offsets):
-    return sentence[:e1_offsets[0][0]].strip(' ,.:!;?')
+    text = sentence[:e1_offsets[0][0]]
+    return text.replace('#', '').strip(' ,.:!;?')
 
 def words_after(sentence, e1_offsets, e2_offsets):
-    return sentence[e2_offsets[-1][-1] + 1:].strip(' ,.:!;?')
+    text = sentence[e2_offsets[-1][-1] + 1:]
+    return text.replace('#', '').strip(' ,.:!;?')
 
 def words_between(sentence, e1_offsets, e2_offsets):
     begin = e1_offsets[0][-1] + 1
     end = e2_offsets[0][0]
-    return sentence[begin:end].strip(' ,.:!;?')
+    text = sentence[begin:end]
+    return text.replace('#', '').strip(' ,.:!;?')
 
 def get_offsets(entity):
     offsets_str = entity.get('charOffset').split(';')
@@ -88,53 +107,62 @@ class SentencePartExtractor(BaseEstimator, TransformerMixin):
             features['before'].append(words_before(sentence, e1_offsets, e2_offsets))
             features['between'].append(words_between(sentence, e1_offsets, e2_offsets))
             features['after'].append(words_after(sentence, e1_offsets, e2_offsets))
-
+        print features['before'][:30]
         return features
 
 ######### APPLY #########
-print 'Reading files...'
-sentences, targets = read_sentences(sys.argv[1])
-train_sentences, test_sentences = sentences[:int(0.7*len(sentences))], sentences[int(0.7*len(sentences)):]
-train_targets, test_targets = targets[:int(0.7*len(targets))], targets[int(0.7*len(targets)):]
+def test(interaction_type):
+    print interaction_type
+    print 'Reading files...'
+    sentences, targets = read_sentences(sys.argv[1], interaction_type)
+    train_sentences, test_sentences = sentences[:int(0.7*len(sentences))], sentences[int(0.7*len(sentences)):]
+    train_targets, test_targets = targets[:int(0.7*len(targets))], targets[int(0.7*len(targets)):]
 
-stop_words = loadStopWords()
+    stop_words = []
+    # stop_words = 'english'
+    # stop_words = loadStopWords()
 
-pipeline = Pipeline([
-    ('sentence_parts', SentencePartExtractor()),
+    pipeline = Pipeline([
+        ('sentence_parts', SentencePartExtractor()),
 
-    ('union', FeatureUnion(
-        transformer_list=[
-            ('before', Pipeline([
-                ('selector', ItemSelector(key='before')),
-                ('features_before', FeatureUnion([
-                    ('count_before', CountVectorizer(stop_words = stop_words)),
-                    ('tf_idf_before', TfidfVectorizer(stop_words = stop_words))
+        ('union', FeatureUnion(
+            transformer_list=[
+                ('before', Pipeline([
+                    ('selector', ItemSelector(key='before')),
+                    ('features_before', FeatureUnion([
+                        ('count_before', CountVectorizer(stop_words = stop_words)),
+                        ('tf_idf_before', TfidfVectorizer(stop_words = stop_words))
+                    ]))
+                ])),
+                ('between', Pipeline([
+                    ('selector', ItemSelector(key='between')),
+                    ('features_between', FeatureUnion([
+                        ('count_between', CountVectorizer(stop_words = stop_words)),
+                        ('tf_idf_between', TfidfVectorizer(stop_words = stop_words))
+                    ]))
+                ])),
+                ('after', Pipeline([
+                    ('selector', ItemSelector(key='after')),
+                    ('features_after', FeatureUnion([
+                        ('count_after', CountVectorizer(stop_words = stop_words)),
+                        ('tf_idf_after', TfidfVectorizer(stop_words = stop_words))
+                    ]))
                 ]))
-            ])),
-            ('between', Pipeline([
-                ('selector', ItemSelector(key='between')),
-                ('features_between', FeatureUnion([
-                    ('count_between', CountVectorizer(stop_words = stop_words)),
-                    ('tf_idf_between', TfidfVectorizer(stop_words = stop_words))
-                ]))
-            ])),
-            ('after', Pipeline([
-                ('selector', ItemSelector(key='after')),
-                ('features_after', FeatureUnion([
-                    ('count_after', CountVectorizer(stop_words = stop_words)),
-                    ('tf_idf_after', TfidfVectorizer(stop_words = stop_words))
-                ]))
-            ]))
-        ]
-    )),
-    ('clf', LinearSVC())
-])
+            ]
+        )),
+        ('clf', LinearSVC())
+    ])
 
-print 'Training...'
-pipeline.fit(train_sentences, train_targets)
+    print 'Training...'
+    pipeline.fit(train_sentences, train_targets)
 
-print 'Predicting...'
-predicted = pipeline.predict(test_sentences)
+    print 'Predicting...'
+    predicted = pipeline.predict(test_sentences)
 
 
-print(metrics.classification_report(test_targets, predicted))
+    print(metrics.classification_report(test_targets, predicted))
+    print(metrics.roc_curve(test_targets, predicted))
+
+test('effect')
+# test('mechanism')
+# test('int')
