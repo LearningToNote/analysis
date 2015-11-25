@@ -102,6 +102,8 @@ sentence_target = [i[1] for i in train_tuples]
 test_target = [i[1] for i in test_tuples]
 test_data = [i[0] for i in test_tuples]
 
+
+
 print 'Training...'
 clf = Pipeline([('vect', CountVectorizer(stop_words = loadStopWords())),
                ('clf', LinearSVC())
@@ -111,6 +113,5 @@ clf.fit(sentence_data, sentence_target)
 
 print 'Predicting...'
 predicted = clf.predict(test_data)
-
 
 print(metrics.classification_report(test_target, predicted))

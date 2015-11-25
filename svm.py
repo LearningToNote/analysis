@@ -3,9 +3,10 @@ import os
 import collections
 import sys
 from random import sample
+import random
 
 import numpy as np
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 from sklearn import metrics
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
@@ -15,6 +16,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 import pdb
 
 TEST_RATIO = .7
+REPLACE_ENTITIES = True
 
 ######### READ AND SPLIT SENTENCES #########
 def read_sentences(filepath, interaction_type):
@@ -39,8 +41,9 @@ def read_sentences(filepath, interaction_type):
                         e1_offsets = get_offsets(e1)
                         e2_offsets = get_offsets(e2)
 
-                        text = replaceEntity(text, e1_offsets)
-                        text = replaceEntity(text, e2_offsets)
+                        if REPLACE_ENTITIES:
+                            text = replaceEntity(text, e1_offsets)
+                            text = replaceEntity(text, e2_offsets)
 
                         if pair.get('ddi') == "true" and pair.get('type') == interaction_type:
                             true_samples.append((text, e1_offsets, e2_offsets))
@@ -129,12 +132,17 @@ def test(interaction_type):
     sentences = true_samples + false_samples
     targets = len(true_samples) * [True] + len(false_samples) * [False]
 
+    z = zip(sentences, targets)
+
+    random.shuffle(z)
+    sentences, targets = zip(*z)
+
     train_sentences, test_sentences = splitSamples(sentences)
     train_targets, test_targets = splitSamples(targets)
 
-    stop_words = []
+    #stop_words = []
     # stop_words = 'english'
-    # stop_words = loadStopWords()
+    stop_words = loadStopWords()
 
     pipeline = Pipeline([
         ('sentence_parts', SentencePartExtractor()),
@@ -176,7 +184,28 @@ def test(interaction_type):
 
     print(metrics.classification_report(test_targets, predicted))
     # print(metrics.roc_curve(test_targets, predicted))
+    return test_targets, predicted
 
-test('effect')
-# test('mechanism')
-# test('int')
+#test('advise')
+#test('effect')
+#test('mechanism')
+#test('int')
+
+types = ['advise', 'effect', 'mechanism', 'int']
+for i in types:
+    targets, predicted = test(i)
+    roc = metrics.roc_curve(targets, predicted)
+    print(roc)
+    roc_auc = metrics.auc(roc[0], roc[1])
+    plt.plot(roc[0], roc[1],
+             label= ' ' + i + ' area = %0.2f' % (roc_auc)
+            )
+
+plt.plot([0, 1], [0, 1], 'k--')
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('Some extension of Receiver operating characteristic to multi-class')
+plt.legend(loc="lower right")
+plt.show()
