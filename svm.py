@@ -2,9 +2,10 @@ import xml.etree.ElementTree as ET
 import os
 import collections
 import sys
+from random import sample
 
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from sklearn import metrics
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
@@ -13,10 +14,12 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 import pdb
 
+TEST_RATIO = .7
+
 ######### READ AND SPLIT SENTENCES #########
 def read_sentences(filepath, interaction_type):
-    sentences = []
-    targets = []
+    true_samples = []
+    false_samples = []
 
     for filename in os.listdir(filepath):
        if (".xml" in filename):
@@ -39,10 +42,12 @@ def read_sentences(filepath, interaction_type):
                         text = replaceEntity(text, e1_offsets)
                         text = replaceEntity(text, e2_offsets)
 
-                        sentences.append((text, e1_offsets, e2_offsets))
-                        targets.append(pair.get('ddi') == "true" and
-                            pair.get('type') == interaction_type)
-    return sentences, targets
+                        if pair.get('ddi') == "true" and pair.get('type') == interaction_type:
+                            true_samples.append((text, e1_offsets, e2_offsets))
+                        else:
+                            false_samples.append((text, e1_offsets, e2_offsets))
+
+    return true_samples, false_samples
 
 def replaceEntity(text, offsets):
     for offset in offsets:
@@ -83,6 +88,9 @@ def loadStopWords():
             stops.append(line.translate(None, '\r\n'))
     return stops
 
+def splitSamples(smaples):
+    return smaples[:int(TEST_RATIO*len(smaples))], smaples[int(TEST_RATIO*len(smaples)):]
+
 ######### SKLEARN PIPELINE #########
 class ItemSelector(BaseEstimator, TransformerMixin):
     def __init__(self, key):
@@ -114,9 +122,15 @@ class SentencePartExtractor(BaseEstimator, TransformerMixin):
 def test(interaction_type):
     print interaction_type
     print 'Reading files...'
-    sentences, targets = read_sentences(sys.argv[1], interaction_type)
-    train_sentences, test_sentences = sentences[:int(0.7*len(sentences))], sentences[int(0.7*len(sentences)):]
-    train_targets, test_targets = targets[:int(0.7*len(targets))], targets[int(0.7*len(targets)):]
+    true_samples, false_samples = read_sentences(sys.argv[1], interaction_type)
+    # randomly select as many as true samples
+    false_samples = sample(false_samples, len(true_samples))
+
+    sentences = true_samples + false_samples
+    targets = len(true_samples) * [True] + len(false_samples) * [False]
+
+    train_sentences, test_sentences = splitSamples(sentences)
+    train_targets, test_targets = splitSamples(targets)
 
     stop_words = []
     # stop_words = 'english'
@@ -161,7 +175,7 @@ def test(interaction_type):
 
 
     print(metrics.classification_report(test_targets, predicted))
-    print(metrics.roc_curve(test_targets, predicted))
+    # print(metrics.roc_curve(test_targets, predicted))
 
 test('effect')
 # test('mechanism')
