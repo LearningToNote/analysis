@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from sklearn import metrics
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.feature_extraction import DictVectorizer
 from sklearn.svm import LinearSVC
 from sklearn.base import BaseEstimator, TransformerMixin
 
@@ -62,17 +63,17 @@ def replaceEntity(text, offsets):
 
 def words_before(sentence, e1_offsets, e2_offsets):
     text = sentence[:e1_offsets[0][0]]
-    return text.replace('#', '').strip(' ,.:!;?')
+    return text.replace('#', '').replace('  ', ' ').strip(' ,.:!;?')
 
 def words_after(sentence, e1_offsets, e2_offsets):
     text = sentence[e2_offsets[-1][-1] + 1:]
-    return text.replace('#', '').strip(' ,.:!;?')
+    return text.replace('#', '').replace('  ', ' ').strip(' ,.:!;?')
 
 def words_between(sentence, e1_offsets, e2_offsets):
     begin = e1_offsets[0][-1] + 1
     end = e2_offsets[0][0]
     text = sentence[begin:end]
-    return text.replace('#', '').strip(' ,.:!;?')
+    return text.replace('#', '').replace('  ', ' ').strip(' ,.:!;?')
 
 def get_offsets(entity):
     offsets_str = entity.get('charOffset').split(';')
@@ -118,8 +119,27 @@ class SentencePartExtractor(BaseEstimator, TransformerMixin):
             features['before'].append(words_before(sentence, e1_offsets, e2_offsets))
             features['between'].append(words_between(sentence, e1_offsets, e2_offsets))
             features['after'].append(words_after(sentence, e1_offsets, e2_offsets))
-        print features['before'][:30]
         return features
+
+class IDFExtractor(BaseEstimator, TransformerMixin):
+    def __init__(self, collection):
+        self.collection = collection
+
+    def fit(self, x, y=None):
+        return self
+
+    def transform(self, sentences):
+        features = []
+        for sentence in sentences:
+            values = {}
+            for term in set(sentence.split(' ')):
+                # if term == '': continue
+                values[term] = idf(term, self.collection)
+            features.append(values)
+        return features
+
+def idf(term, collection):
+    return len([s for s in collection if term in s[0]])
 
 ######### APPLY #########
 def test(interaction_type):
@@ -153,21 +173,31 @@ def test(interaction_type):
                     ('selector', ItemSelector(key='before')),
                     ('features_before', FeatureUnion([
                         ('count_before', CountVectorizer(stop_words = stop_words)),
-                        ('tf_idf_before', TfidfVectorizer(stop_words = stop_words))
+                        ('idf', Pipeline([
+                            ('dict_before', IDFExtractor(train_sentences)),
+                            ('idf_before', DictVectorizer())
+                        ]))
+                        # ('tf_idf_before', TfidfVectorizer(stop_words = stop_words))
                     ]))
                 ])),
                 ('between', Pipeline([
                     ('selector', ItemSelector(key='between')),
                     ('features_between', FeatureUnion([
                         ('count_between', CountVectorizer(stop_words = stop_words)),
-                        ('tf_idf_between', TfidfVectorizer(stop_words = stop_words))
+                        ('idf', Pipeline([
+                            ('dict_between', IDFExtractor(train_sentences)),
+                            ('idf_between', DictVectorizer())
+                        ]))                      # ('tf_idf_between', TfidfVectorizer(stop_words = stop_words))
                     ]))
                 ])),
                 ('after', Pipeline([
                     ('selector', ItemSelector(key='after')),
                     ('features_after', FeatureUnion([
                         ('count_after', CountVectorizer(stop_words = stop_words)),
-                        ('tf_idf_after', TfidfVectorizer(stop_words = stop_words))
+                        ('idf', Pipeline([
+                            ('dict_after', IDFExtractor(train_sentences)),
+                            ('idf_after', DictVectorizer())
+                        ]))                        # ('tf_idf_after', TfidfVectorizer(stop_words = stop_words))
                     ]))
                 ]))
             ]
