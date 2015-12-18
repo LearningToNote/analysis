@@ -1,38 +1,51 @@
 /*
-SELECT E1_ID, E2_ID,
+INSERT INTO FOO(
+SELECT train_seq.NEXTVAL, DDI,
 SUM(use) AS use,
 SUM(increase) AS increase
 FROM(
-  SELECT ID, TA_SENTENCE, E1_ID, E2_ID,
+  SELECT DOC_ID, TA_SENTENCE, E1_ID, E2_ID,
   CASE WHEN TOKEN = 'use' THEN 1 ELSE 0 END AS use,
   CASE WHEN TOKEN = 'increase' THEN 1 ELSE 0 END AS increase
   FROM "#verbsInBetween"
 )
-GROUP BY ID, TA_SENTENCE, E1_ID, E2_ID
+GROUP BY DOC_ID, TA_SENTENCE, E1_ID, E2_ID, DDI
+)
 */
 
-CREATE PROCEDURE "LEARNING_TO_NOTE"."LTN::DynamicWordsInBetween"
+DROP SEQUENCE train_seq;
+CREATE SEQUENCE train_seq;
+
+DROP TYPE TT_COMMON_WORDS_INBETWEEN;
+CALL "LEARNING_TO_NOTE"."LTN::DynamicWordsTableType"();
+
+DROP PROCEDURE "LEARNING_TO_NOTE"."LTN::DynamicWordsInBetween";
+
+CREATE PROCEDURE "LEARNING_TO_NOTE"."LTN::DynamicWordsInBetween"(IN ouptut_table_name VARCHAR(255))
   LANGUAGE SQLSCRIPT
   SQL SECURITY INVOKER
   DEFAULT SCHEMA LEARNING_TO_NOTE AS
   CURSOR C_WORDS FOR SELECT TOKEN FROM "COMMON_WORDS";
   i int default 0;
 
-  select_clause NVARCHAR(2000000) := 'SELECT E1_ID, E2_ID,';
-  from_clause NVARCHAR(2000000) := 'FROM( SELECT ID, TA_SENTENCE, E1_ID, E2_ID,';
+  insert_clause NVARCHAR(2000000) := 'INSERT INTO ' || ouptut_table_name || '(';
+  select_clause NVARCHAR(2000000) := 'SELECT train_seq.NEXTVAL, DDI,';
+  from_clause NVARCHAR(2000000) := 'FROM( SELECT DOC_ID, TA_SENTENCE, E1_ID, E2_ID, DDI,';
   query NVARCHAR(2000000);
 BEGIN
 
-  CREATE LOCAL TEMPORARY TABLE "#verbsInBetween" (
-    ID VARCHAR(25),
+  CREATE LOCAL TEMPORARY TABLE "#wordsInBetween" (
+    DOC_ID VARCHAR(25),
     TA_SENTENCE INT,
     E1_ID VARCHAR(25),
     E2_ID VARCHAR(25),
+    DDI TINYINT,
     TOKEN VARCHAR(25));
 
-  INSERT INTO "#verbsInBetween" (
-    SELECT ID, TA_SENTENCE, E1_ID, E2_ID, TOKEN FROM (
-        SELECT FTI.ID, FTI.TA_SENTENCE, E1_ID, E2_ID,
+
+  INSERT INTO "#wordsInBetween" (
+    SELECT ID, TA_SENTENCE, E1_ID, E2_ID, DDI, TOKEN FROM (
+        SELECT FTI.ID, FTI.TA_SENTENCE, E1_ID, E2_ID, DDI,
       CASE WHEN FTI.TA_STEM IS NULL THEN FTI.TA_NORMALIZED ELSE FTI.TA_STEM END AS TOKEN
       FROM PAIRS P
       JOIN ENTITIES E1 ON P.E1_ID = E1.ID
@@ -49,7 +62,7 @@ BEGIN
       AND (FTI.TA_TYPE = 'verb' OR FTI.TA_TYPE = 'auxiliary verb')
       ---AND UD.DOCUMENT_ID = 'DDI-DrugBank.d522')
       )
-    GROUP BY ID, TA_SENTENCE, E1_ID, E2_ID, TOKEN);
+    GROUP BY ID, TA_SENTENCE, E1_ID, E2_ID, DDI, TOKEN);
 
   FOR CUR_ROW AS C_WORDS DO
     if i>0 then
@@ -62,15 +75,18 @@ BEGIN
     i := i+1;
   END FOR;
 
-  from_clause := from_clause || ' FROM "#verbsInBetween")';
-  from_clause := from_clause || ' GROUP BY ID, TA_SENTENCE, E1_ID, E2_ID';
+  from_clause := from_clause || ' FROM "#wordsInBetween")';
+  from_clause := from_clause || ' GROUP BY DOC_ID, TA_SENTENCE, E1_ID, E2_ID, DDI';
 
-  query := select_clause ||' '|| from_clause;
+  query := insert_clause || select_clause ||' '|| from_clause || ')';
 
   EXECUTE IMMEDIATE :query;
 
-  DROP TABLE "#verbsInBetween";
+  DROP TABLE "#wordsInBetween";
 END;
 
 
-CALL "LEARNING_TO_NOTE"."LTN::DynamicWordsInBetween"();
+
+DROP TABLE "LEARNING_TO_NOTE".SVM_RAW_DATA;
+CREATE COLUMN TABLE "LEARNING_TO_NOTE".SVM_RAW_DATA LIKE TT_COMMON_WORDS_INBETWEEN;
+CALL "LEARNING_TO_NOTE"."LTN::DynamicWordsInBetween"('"LEARNING_TO_NOTE".SVM_RAW_DATA');
