@@ -4,9 +4,9 @@ import collections
 import sys
 from random import sample
 import random
-
+import json
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from sklearn import metrics
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
@@ -16,74 +16,61 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 import pdb
 
+import pyhdb
+import pyhdb.exceptions
+from pprint import pprint as pp
+
+#Load credentials
+with open("secrets.json") as f:
+    secrets = json.load(f)
+
+connection = pyhdb.connect(
+    host=secrets['host'],
+    port=secrets['port'],
+    user=secrets['username'],
+    password=secrets['password']
+)
+
+cursor = connection.cursor()
+
 TEST_RATIO = .7
 REPLACE_ENTITIES = True
 
 ######### READ AND SPLIT SENTENCES #########
-def read_sentences(filepath, interaction_type):
-    true_samples = []
-    false_samples = []
+def entity_tokens():
+    cursor.execute("""
+        SELECT E1_ID, E2_ID, DDI,
+        CASE WHEN FTI.TA_STEM IS NULL THEN FTI.TA_NORMALIZED ELSE FTI.TA_STEM END AS TOKEN,
+        CASE
+            WHEN FTI.TA_COUNTER < FTI1.TA_COUNTER THEN -1
+            WHEN (FTI.TA_COUNTER > FTI1.TA_COUNTER AND FTI.TA_COUNTER < FTI2.TA_COUNTER) THEN 0
+            WHEN FTI.TA_COUNTER > FTI2.TA_COUNTER THEN 1
+        END AS POSITION
+        FROM LEARNING_TO_NOTE.PAIRS P
+        JOIN LEARNING_TO_NOTE.ENTITIES E1 ON P.E1_ID = E1.ID
+        JOIN LEARNING_TO_NOTE.ENTITIES E2 ON P.E2_ID = E2.ID
+        JOIN LEARNING_TO_NOTE.USER_DOCUMENTS UD ON E1.USER_DOC_ID = UD.ID AND E2.USER_DOC_ID = UD.ID
+        JOIN LEARNING_TO_NOTE.OFFSETS O1 ON O1.ENTITY_ID = E1.ID
+        JOIN LEARNING_TO_NOTE.OFFSETS O2 ON O2.ENTITY_ID = E2.ID
+        JOIN LEARNING_TO_NOTE."$TA_FTI" FTI1 ON FTI1.ID = UD.DOCUMENT_ID AND FTI1.TA_OFFSET = O1."START" AND FTI1.TA_TOKEN = E1.TEXT
+        JOIN LEARNING_TO_NOTE."$TA_FTI" FTI2 ON FTI2.ID = UD.DOCUMENT_ID AND FTI2.TA_OFFSET = O2."START" AND FTI2.TA_TOKEN = E2.TEXT
+        JOIN LEARNING_TO_NOTE."$TA_FTI" FTI ON FTI.ID = UD.DOCUMENT_ID
+        WHERE UD.USER_ID = 'DDI-IMPORTER'
+        AND FTI.TA_TYPE <> 'punctuation'
+        AND FTI1.TA_SENTENCE = FTI2.TA_SENTENCE
+        AND FTI.TA_SENTENCE = FTI1.TA_SENTENCE
+        AND FTI.TA_COUNTER <> FTI1.TA_COUNTER
+        AND FTI.TA_COUNTER <> FTI2.TA_COUNTER
+        AND FTI1.TA_COUNTER < FTI2.TA_COUNTER
 
-    for filename in os.listdir(filepath):
-       if (".xml" in filename):
-            tree = ET.parse(filepath+filename)
-            root = tree.getroot()
+        --AND UD.DOCUMENT_ID = 'DDI-DrugBank.d522'
+        --AND E1_ID = 'DDI-DrugBank.d522.s1.e0'
+        --ORDER BY E1_ID, E2_ID, TA_SENTENCE
+        ;
+    """)
+    print 'done'
+    return cursor.fetchall()
 
-            for document in root.iter('document'):
-                for sentence in document.findall('sentence'):
-                    entities = sentence.findall('entity')
-                    text = sentence.get('text')
-                    for pair in sentence.findall('pair'):
-                        pair_e1 = pair.get('e1')
-                        pair_e2 = pair.get('e2')
-                        e1 = filter(lambda x: x.get('id') == pair_e1, entities)[0]
-                        e2 = filter(lambda x: x.get('id') == pair_e2, entities)[0]
-
-                        e1_offsets = get_offsets(e1)
-                        e2_offsets = get_offsets(e2)
-
-                        if REPLACE_ENTITIES:
-                            text = replaceEntity(text, e1_offsets)
-                            text = replaceEntity(text, e2_offsets)
-
-                        if pair.get('ddi') == "true" and pair.get('type') == interaction_type:
-                            true_samples.append((text, e1_offsets, e2_offsets))
-                        else:
-                            false_samples.append((text, e1_offsets, e2_offsets))
-
-    return true_samples, false_samples
-
-def replaceEntity(text, offsets):
-    for offset in offsets:
-        text = text[:offset[0]] +\
-            (offset[1] - offset[0] + 1)*'#' +\
-            text[offset[1] + 1:]
-    return text
-
-
-def words_before(sentence, e1_offsets, e2_offsets):
-    text = sentence[:e1_offsets[0][0]]
-    return text.replace('#', '').replace('  ', ' ').strip(' ,.:!;?')
-
-def words_after(sentence, e1_offsets, e2_offsets):
-    text = sentence[e2_offsets[-1][-1] + 1:]
-    return text.replace('#', '').replace('  ', ' ').strip(' ,.:!;?')
-
-def words_between(sentence, e1_offsets, e2_offsets):
-    begin = e1_offsets[0][-1] + 1
-    end = e2_offsets[0][0]
-    text = sentence[begin:end]
-    return text.replace('#', '').replace('  ', ' ').strip(' ,.:!;?')
-
-def get_offsets(entity):
-    offsets_str = entity.get('charOffset').split(';')
-    offsets = []
-    for offset in offsets_str:
-        offsets.extend(map(int, offset.split('-')))
-    result = []
-    for i in range(0, len(offsets), 2):
-        result.append((offsets[i], offsets[i+1]))
-    return result
 
 def loadStopWords():
     stops = []
@@ -94,6 +81,27 @@ def loadStopWords():
 
 def splitSamples(smaples):
     return smaples[:int(TEST_RATIO*len(smaples))], smaples[int(TEST_RATIO*len(smaples)):]
+
+
+def read_words():
+    true_pairs = {}
+    false_pairs = {}
+
+    for e1, e2, DDI, token, pos in entity_tokens():
+        if DDI == 0:
+            insert_pair(false_pairs, e1, e2, token, pos)
+        else:
+            insert_pair(true_pairs, e1, e2, token, pos)
+    return true_pairs, false_pairs
+
+def insert_pair(pairs, e1, e2, token, pos):
+    pairs.setdefault((e1, e2), ([],[],[]))
+    if pos < 0:
+        pairs[e1, e2][0].append(token)
+    elif pos == 0:
+        pairs[e1, e2][1].append(token)
+    else:
+        pairs[e1, e2][2].append(token)
 
 ######### SKLEARN PIPELINE #########
 class ItemSelector(BaseEstimator, TransformerMixin):
@@ -144,8 +152,7 @@ def idf(term, collection):
 ######### APPLY #########
 def test(interaction_type):
     print interaction_type
-    print 'Reading files...'
-    true_samples, false_samples = read_sentences(sys.argv[1], interaction_type)
+    true_samples, false_samples = read_words()
     # randomly select as many as true samples
     false_samples = sample(false_samples, len(true_samples))
 
@@ -216,10 +223,13 @@ def test(interaction_type):
     # print(metrics.roc_curve(test_targets, predicted))
     return test_targets, predicted
 
+pp(read_words())
 
-types = ['advise', 'effect', 'mechanism', 'int']
-for i in types:
-    targets, predicted = test(i)
+
+
+# types = ['advise', 'effect', 'mechanism', 'int']
+# for i in types:
+#     targets, predicted = test(i)
     # roc = metrics.roc_curve(targets, predicted)
     # print(roc)
     # roc_auc = metrics.auc(roc[0], roc[1])
