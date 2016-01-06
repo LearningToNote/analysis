@@ -13,7 +13,7 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.svm import LinearSVC
 from sklearn.base import BaseEstimator, TransformerMixin
-
+import time
 import pdb
 
 import pyhdb
@@ -21,7 +21,7 @@ import pyhdb.exceptions
 from pprint import pprint as pp
 
 #Load credentials
-with open("secrets.json") as f:
+with open("../secrets.json") as f:
     secrets = json.load(f)
 
 connection = pyhdb.connect(
@@ -63,13 +63,16 @@ def entity_tokens():
         AND FTI.TA_COUNTER <> FTI2.TA_COUNTER
         AND FTI1.TA_COUNTER < FTI2.TA_COUNTER
 
+        --LIMIT 50000
+
         --AND UD.DOCUMENT_ID = 'DDI-DrugBank.d522'
         --AND E1_ID = 'DDI-DrugBank.d522.s1.e0'
         --ORDER BY E1_ID, E2_ID, TA_SENTENCE
         ;
     """)
+    results = cursor.fetchall()
     print 'done'
-    return cursor.fetchall()
+    return results
 
 
 def loadStopWords():
@@ -92,7 +95,8 @@ def read_words():
             insert_pair(false_pairs, e1, e2, token, pos)
         else:
             insert_pair(true_pairs, e1, e2, token, pos)
-    return true_pairs, false_pairs
+
+    return true_pairs.values(), false_pairs.values()
 
 def insert_pair(pairs, e1, e2, token, pos):
     pairs.setdefault((e1, e2), ([],[],[]))
@@ -104,16 +108,6 @@ def insert_pair(pairs, e1, e2, token, pos):
         pairs[e1, e2][2].append(token)
 
 ######### SKLEARN PIPELINE #########
-class ItemSelector(BaseEstimator, TransformerMixin):
-    def __init__(self, key):
-        self.key = key
-
-    def fit(self, x, y=None):
-        return self
-
-    def transform(self, data_dict):
-        return data_dict[self.key]
-
 class SentencePartExtractor(BaseEstimator, TransformerMixin):
     def fit(self, x, y=None):
         return self
@@ -123,11 +117,21 @@ class SentencePartExtractor(BaseEstimator, TransformerMixin):
         features['before'] = []
         features['between'] = []
         features['after'] = []
-        for sentence, e1_offsets, e2_offsets in triples:
-            features['before'].append(words_before(sentence, e1_offsets, e2_offsets))
-            features['between'].append(words_between(sentence, e1_offsets, e2_offsets))
-            features['after'].append(words_after(sentence, e1_offsets, e2_offsets))
+        for before, between, after in triples:
+            features['before'].append(' '.join(before))
+            features['between'].append(' '.join(between))
+            features['after'].append(' '.join(after))
         return features
+
+class ItemSelector(BaseEstimator, TransformerMixin):
+    def __init__(self, key):
+        self.key = key
+
+    def fit(self, x, y=None):
+        return self
+
+    def transform(self, data_dict):
+        return data_dict[self.key]
 
 class IDFExtractor(BaseEstimator, TransformerMixin):
     def __init__(self, collection):
@@ -150,9 +154,11 @@ def idf(term, collection):
     return len([s for s in collection if term in s[0]])
 
 ######### APPLY #########
-def test(interaction_type):
-    print interaction_type
+def test():
+    t0 = t1 = time.time()
+    print 'reading from hana'
     true_samples, false_samples = read_words()
+    print 'that needed {}'.format(time.time() - t1)
     # randomly select as many as true samples
     false_samples = sample(false_samples, len(true_samples))
 
@@ -212,21 +218,25 @@ def test(interaction_type):
         ('clf', LinearSVC())
     ])
 
+    t2 = time.time()
     print 'Training...'
     pipeline.fit(train_sentences, train_targets)
+    print 'that needed {}'.format(time.time() - t2)
 
+
+    t3 = time.time()
     print 'Predicting...'
     predicted = pipeline.predict(test_sentences)
+    print 'that needed {}'.format(time.time() - t3)
 
 
     print(metrics.classification_report(test_targets, predicted))
     # print(metrics.roc_curve(test_targets, predicted))
+
+    print 'the whole thing needed {}'.format(time.time() - t0)
     return test_targets, predicted
 
-pp(read_words())
-
-
-
+test()
 # types = ['advise', 'effect', 'mechanism', 'int']
 # for i in types:
 #     targets, predicted = test(i)
