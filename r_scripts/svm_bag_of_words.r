@@ -1,3 +1,59 @@
+####################################################################################################
+
+bag_o_words <-
+function(text.var, apostrophe.remove = FALSE, ...) {
+    if (identical(list(), list(...))) {
+        bag_o_words1(x = text.var, apostrophe.remove = apostrophe.remove, ...)
+    } else {
+        bag_o_words2(x = text.var, apostrophe.remove = apostrophe.remove)
+    }
+}
+
+bag_o_words1 <-
+function(x, apostrophe.remove = FALSE) {
+    x <- gsub("\\|", "", x[!is.na(x)])
+    x <- paste(x, collapse=" ")
+    if(apostrophe.remove) {
+        reg <- "[^[:alpha:]]"
+        x <- gsub("'", "", x)
+    } else {
+        reg <- "[^[:alpha:]|\\']"
+    }
+    x <- strsplit(tolower(gsub(reg, " ", x)), "\\s+")[[1]]
+    x[x != ""]
+}
+
+bag_o_words2 <-
+function(x, apostrophe.remove = FALSE, ...) {
+    unblanker(words(strip(clean(x),
+        apostrophe.remove = apostrophe.remove, ...)))
+}
+
+unbag <- function(text.var, na.rm = TRUE) {
+    text.var <- unlist(text.var)
+    if (na.rm) text.var <- text.var[!is.na(text.var)]
+    paste(text.var, collapse=" ")
+}
+
+breaker <-
+function(text.var) {
+    unblanker(unlist(strsplit(as.character(text.var),
+        "[[:space:]]|(?=[|.!?*-])", perl=TRUE)))
+}
+
+word_split <-
+function (text.var) {
+    x <- reducer(Trim(clean(text.var)))
+    sapply(x, function(x) {
+            unblanker(unlist(strsplit(x, "[[:space:]]|(?=[.!?*-])", perl = TRUE)))
+        }, simplify = FALSE
+    )
+}
+
+####################################################################################################
+
+library(e1071)
+
 bag.make = function(x, n = 100000000000){
 
     bag = bag_o_words(x)
@@ -34,19 +90,13 @@ bag.make = function(x, n = 100000000000){
     b
 }
 
-
-library(e1071)
-library(qdap)
-
-train_data = read.csv("~/Downloads/coolData2.csv")
-
 true_pairs <- train_data[train_data$DDI == 1,]
 false_pairs <- train_data[train_data$DDI == 0,]
 
 false_downsampled_index <- sample(1:nrow(false_pairs), nrow(true_pairs))
 false_downsampled <- false_pairs[false_downsampled_index,]
 
-ball<-rbind(true_pairs, false_downsampled)
+all<-rbind(true_pairs, false_downsampled)
 
 bag <- bag.make(all$BEFORE)
 
@@ -61,15 +111,15 @@ colnames(extracted_features_after) <- paste("a", colnames(extracted_features_aft
 
 index <- 1:nrow(all)
 
-all <-cbind(all$DDI,extracted_features_before,extracted_features_between,extracted_features_after)
-colnames(all)[1] <- "DDI"
+extracted_features <-cbind(all$DDI,extracted_features_before,extracted_features_between,extracted_features_after)
+colnames(extracted_features)[1] <- "DDI"
 testindex <- sample(index, trunc(length(index)/3))
-testset <- all[testindex,]
-trainset <- all[-testindex,]
+testset <- extracted_features[testindex,]
+trainset <- extracted_features[-testindex,]
 
-svm.model <- svm(DDI ~ ., data = trainset, type="C-classification")
+svm.model <- svm(DDI ~ ., data = trainset, type="C-classification", cost = 100, gamma = 1)
 svm.pred <- predict(svm.model, testset[,-1])
 
 pred <-as.data.frame(svm.pred)
-result<-cbind(pred[,1], ball[testindex,-1])
-colnames(result)[1] <- "DDI"
+result<-cbind(pred[,1], all[testindex,])
+colnames(result) <- c("DDI", "DDI_ACTUAL", "BEFORE", "BETWEEN", "AFTER")
