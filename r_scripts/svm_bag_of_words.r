@@ -46,7 +46,7 @@ false_pairs <- train_data[train_data$DDI == 0,]
 false_downsampled_index <- sample(1:nrow(false_pairs), nrow(true_pairs))
 false_downsampled <- false_pairs[false_downsampled_index,]
 
-ball<-rbind(true_pairs, false_downsampled)
+all<-rbind(true_pairs, false_downsampled)
 
 bag <- bag.make(all$BEFORE)
 
@@ -61,15 +61,15 @@ colnames(extracted_features_after) <- paste("a", colnames(extracted_features_aft
 
 index <- 1:nrow(all)
 
-all <-cbind(all$DDI,extracted_features_before,extracted_features_between,extracted_features_after)
-colnames(all)[1] <- "DDI"
+extracted_features <-cbind(all$DDI,extracted_features_before,extracted_features_between,extracted_features_after)
+colnames(extracted_features)[1] <- "DDI"
 testindex <- sample(index, trunc(length(index)/3))
 testset <- all[testindex,]
 trainset <- all[-testindex,]
 
-svm.model <- svm(DDI ~ ., data = trainset, type="C-classification")
+svm.model <- svm(DDI ~ ., data = trainset, type="C-classification", cost=100, gamma=1)
 svm.pred <- predict(svm.model, testset[,-1])
 
 pred <-as.data.frame(svm.pred)
-result<-cbind(pred[,1], ball[testindex,-1])
+result<-cbind(pred[,1], all[testindex,])
 colnames(result)[1] <- "DDI"
