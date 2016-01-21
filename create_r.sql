@@ -115,9 +115,16 @@ BEGIN
 	extracted_features_after <- bag$apply(all$AFTER)
 	colnames(extracted_features_after) <- paste("a", colnames(extracted_features_after), sep = "_")
 
+	pos_before <- bag$apply(all$P_BEFORE)
+    colnames(pos_before) <- paste("pb", colnames(pos_before), sep = "_")
+    pos_between <- bag$apply(all$P_BETWEEN)
+    colnames(pos_between) <- paste("pi", colnames(pos_between), sep = "_")
+    pos_after <- bag$apply(all$P_AFTER)
+    colnames(pos_after) <- paste("pa", colnames(pos_after), sep = "_")
+
 	index <- 1:nrow(all)
 
-	extracted_features <-cbind(all$DDI,extracted_features_before,extracted_features_between,extracted_features_after)
+	extracted_features <-cbind(all$DDI,extracted_features_before,extracted_features_between,extracted_features_after, pos_before, pos_between, pos_after)
 	colnames(extracted_features)[1] <- "DDI"
 	testindex <- sample(index, trunc(length(index)/3))
 	testset <- extracted_features[testindex,]
@@ -128,10 +135,21 @@ BEGIN
 
 	pred <-as.data.frame(svm.pred)
 	result<-cbind(pred[,1], all[testindex,-1])
-	colnames(result) <- c("DDI", "BEFORE", "BETWEEN", "AFTER")
+	colnames(result) <- c("DDI", "BEFORE", "BETWEEN", "AFTER", "P_BEFORE", "P_BETWEEN", "P_AFTER")
 
 	conf <- table(svm.pred, testset[,1])
 	print(conf)
+
+	tp <- conf[2,2]
+	fp <- conf[2,1]
+	tn <- conf[1,1]
+	fn <- conf[1,2]
+
+	precision_true <- tp /(tp+fp)
+	precision_false <- tn / (tn+fn)
+
+	recall_true <- tp / (tp + fn)
+	recall_false <- tn / (tn + fp)
 
 
 	stat <-as.data.frame(matrix(c("example", 1.0), nrow=1, ncol=2) )
