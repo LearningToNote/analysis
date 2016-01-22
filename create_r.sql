@@ -1,7 +1,7 @@
 SET SCHEMA LEARNING_TO_NOTE;
 
-DROP PROCEDURE R_PREDICT;
-CREATE PROCEDURE R_PREDICT(IN train_data TRAIN_DATA, OUT result T_DDI_DATA, OUT stat T_R_STAT)
+DROP PROCEDURE R_PREDICT_POS;
+CREATE PROCEDURE R_PREDICT_POS(IN train_data T_TD_POS, OUT result T_TD_POS, OUT stat T_R_STAT)
 LANGUAGE RLANG AS
 BEGIN
 	####################################################################################################
