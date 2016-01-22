@@ -96,6 +96,8 @@ BEGIN
 	    b
 	}
 
+	train_data <- read.csv(file="/home/johannes/Downloads/data.csv")
+
 	true_pairs <- train_data[train_data$DDI != "NONE",]
 	false_pairs <- train_data[train_data$DDI == "NONE",]
 
@@ -104,20 +106,22 @@ BEGIN
 
 	all<-rbind(true_pairs, false_downsampled)
 
-	bag <- bag.make(all$BEFORE)
 
+	bag <- bag.make(all$BEFORE)
 	extracted_features_before <- bag$apply(all$BEFORE)
 	colnames(extracted_features_before) <- paste("b", colnames(extracted_features_before), sep = "_")
 
+	bag <- bag.make(all$BETWEEN)
 	extracted_features_between <- bag$apply(all$BETWEEN)
 	colnames(extracted_features_between) <- paste("i", colnames(extracted_features_between), sep = "_")
 
+	bag <- bag.make(all$AFTER)
 	extracted_features_after <- bag$apply(all$AFTER)
 	colnames(extracted_features_after) <- paste("a", colnames(extracted_features_after), sep = "_")
 
 	index <- 1:nrow(all)
 
-	extracted_features <-data.frame(all$DDI, extracted_features_before,extracted_features_between,extracted_features_after)
+	extracted_features <- data.frame(all$DDI, extracted_features_before,extracted_features_between,extracted_features_after)
 	colnames(extracted_features)[1] <- "DDI"
 	testindex <- sample(index, trunc(length(index)/3))
 	testset <- extracted_features[testindex,]
@@ -128,24 +132,14 @@ BEGIN
 
 	pred <-as.data.frame(svm.pred)
 	result<-cbind(pred[,1], all[testindex,-1])
-	colnames(result) <- c("DDI", "BEFORE", "BETWEEN", "AFTER", "P_BEFORE", "P_BETWEEN", "P_AFTER")
+	colnames(result) <- c("DDI", "BEFORE", "BETWEEN", "AFTER")
 
 	conf <- table(svm.pred, testset[,1])
 	print(conf)
 
-	tp <- conf[2,2]
-	fp <- conf[2,1]
-	tn <- conf[1,1]
-	fn <- conf[1,2]
+	accuracy <- (conf[1,1] + conf[2,2] + conf[3,3] + conf[4,4] + conf[5,5]) / sum(conf)
 
-	precision_true <- tp /(tp+fp)
-	precision_false <- tn / (tn+fn)
-
-	recall_true <- tp / (tp + fn)
-	recall_false <- tn / (tn + fp)
-
-
-	stat <-as.data.frame(matrix(c("example", 1.0), nrow=1, ncol=2) )
+	stat <-as.data.frame(matrix(c("accuracy", accuracy), nrow=1, ncol=2) )
 
 	colnames(stat) <- c("NAME", "VALUE")
 END;
