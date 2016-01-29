@@ -1,14 +1,12 @@
-SET SCHEMA LEARNING_TO_NOTE;
+SET SCHEMA LTN_TRAIN;
 
 DROP PROCEDURE R_PREDICT;
-CREATE PROCEDURE R_PREDICT(IN data T_TD_POS_CLASSES, OUT result T_TD_POS_CLASSES, OUT stat T_R_STAT)
+CREATE PROCEDURE R_PREDICT(IN data T_TD_CLASSES, OUT result T_TRAIN_RESULTS, OUT stat T_R_STAT)
 LANGUAGE RLANG AS
 BEGIN
 	library(tm)
 	library(e1071)
 	library(SparseM)
-
-#
 
 	true_pairs <- data[data$DDI != "NONE",]
 	false_pairs <- data[data$DDI == "NONE",]
@@ -42,10 +40,9 @@ BEGIN
 	svm.model <- svm(x = trainset, y=ddi[-testindex], type="C-classification", cost = 8, gamma = 0.5)
 
 	svm.pred <- predict(svm.model, testset)
-	result<-cbind(svm.pred, data[testindex,][,-1])
+	result<-cbind(svm.pred, data[testindex,][,c(2,3)])
 	result <-as.data.frame(as.matrix(result))
-	colnames(result) <- c("DDI", "BEFORE", "BETWEEN", "AFTER", "P_BEFORE", "P_BETWEEN", "P_AFTER")
-
+	colnames(result) <- c("DDI", "E1_ID", "E2_ID")
 
 	conf <- table(svm.pred,ddi[testindex])
 	accuracy <- (conf[1,1] + conf[2,2] + conf[3,3] + conf[4,4] + conf[5,5]) / sum(conf)
