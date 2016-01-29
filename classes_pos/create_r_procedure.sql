@@ -96,6 +96,9 @@ BEGIN
 	    b
 	}
 
+	#train_data <- read.csv("/home/johannes/code/masterproject/data_all.csv")
+
+
 	true_pairs <- train_data[train_data$DDI != "NONE",]
 	false_pairs <- train_data[train_data$DDI == "NONE",]
 
