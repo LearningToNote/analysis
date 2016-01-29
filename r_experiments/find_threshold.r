@@ -104,7 +104,7 @@ ddi.sample <- function(coll, n) {
 }
 
 n = 700
-runs = 10
+runs = 5
 
 none <- train_data[train_data$DDI == "NONE",]
 rest <- train_data[train_data$DDI != "NONE",]
@@ -162,8 +162,7 @@ effect <- ddi.sample(trainset[trainset$DDI == "effect",], n)
 none <- ddi.sample(trainset[trainset$DDI == "NONE",], n)
 
 trainset <- rbind(advise, mechanism, int, effect, none)
-shuffle <- sample(1:nrow(trainset))
-trainset <- trainset[shuffle,]
+
 
 
 len <- length(trainset)*.9
@@ -178,6 +177,9 @@ for (i in seq(5,len, by=50)) {
     tmp = 0
 
     for (j in seq(0,runs)) {
+        shuffle <- sample(1:nrow(trainset))
+        trainset <- trainset[shuffle,]
+
         svm.model <- svm(DDI ~ ., data = trainset[1:i,], type="C-classification", cost = 8, gamma = 0.5)
         svm.pred <- predict(svm.model, testset[,-1])
 
