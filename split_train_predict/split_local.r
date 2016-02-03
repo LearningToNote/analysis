@@ -7,9 +7,7 @@ library(tm)
 library(e1071)
 library(SparseM)
 
-data <- read.csv('/home/johannes/code/masterproject/data/data_onecol.csv')
-# tokens <- read.csv('/home/johannes/code/masterproject/data/distinct_tokens.csv')$TOKEN
-
+data <- read.csv('/home/johannes/code/masterproject/data/data.csv')
 true_pairs <- data[data$DDI != "NONE",]
 false_pairs <- data[data$DDI == "NONE",]
 
@@ -23,11 +21,23 @@ testset <- data[testindex,]
 trainset <- data[-testindex,]
 
 
-corpus = Corpus(VectorSource(trainset$TEXT))
-# dtm <- DocumentTermMatrix(corpus, control = list(removeStopwords=FALSE, dictionary=tokens))
-dtm <- DocumentTermMatrix(corpus, control = list(removeStopwords=FALSE))
 
-extracted_features <- dtm
+before_Corpus = Corpus(VectorSource(trainset$BEFORE))
+before_dtm <- DocumentTermMatrix(before_Corpus, control = list(removeStopwords=FALSE))
+dict_before <- Terms(before_dtm)
+colnames(before_dtm) <- paste("b", colnames(before_dtm), sep = "_")
+
+between_Corpus = Corpus(VectorSource(trainset$BETWEEN))
+between_dtm <- DocumentTermMatrix(between_Corpus, control = list(removeStopwords=FALSE))
+dict_between <- Terms(between_dtm)
+colnames(between_dtm) <- paste("i", colnames(between_dtm), sep = "_")
+
+after_Corpus = Corpus(VectorSource(trainset$AFTER))
+after_dtm <- DocumentTermMatrix(after_Corpus, control = list(removeStopwords=FALSE))
+dict_after <- Terms(after_dtm)
+colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
+
+extracted_features <- cbind(before_dtm, between_dtm, after_dtm)
 
 trainddi <- trainset$DDI
 testddi <- testset$DDI
@@ -36,9 +46,27 @@ trainddi <- as.factor(trainddi)
 svm.model <- svm(x = extracted_features, y=trainddi, type="C-classification", cost = 8, gamma = 0.5)
 
 
-corpus2 = Corpus(VectorSource(testset$TEXT))
-dtm2 <- DocumentTermMatrix(corpus2, control = list(removeStopwords=FALSE, dictionary=Terms(dtm)))
-svm.pred <- predict(svm.model, dtm2)
+
+
+
+
+
+before_Corpus = Corpus(VectorSource(testset$BEFORE))
+before_dtm <- DocumentTermMatrix(before_Corpus, control = list(removeStopwords=FALSE, dictionary=dict_before))
+colnames(before_dtm) <- paste("b", colnames(before_dtm), sep = "_")
+
+between_Corpus = Corpus(VectorSource(testset$BETWEEN))
+between_dtm <- DocumentTermMatrix(between_Corpus, control = list(removeStopwords=FALSE, dictionary=dict_between))
+colnames(between_dtm) <- paste("i", colnames(between_dtm), sep = "_")
+
+after_Corpus = Corpus(VectorSource(testset$AFTER))
+after_dtm <- DocumentTermMatrix(after_Corpus, control = list(removeStopwords=FALSE, dictionary=dict_after))
+colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
+
+extracted_features <- cbind(before_dtm, between_dtm, after_dtm)
+
+
+svm.pred <- predict(svm.model, extracted_features)
 result<-cbind(svm.pred, testset[,c(2,3)])
 
 conf <- table(svm.pred,testddi)
