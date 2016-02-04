@@ -50,7 +50,6 @@ svm.model <- svm(x = extracted_features, y=trainddi, type="C-classification", co
 
 
 
-
 before_Corpus = Corpus(VectorSource(testset$BEFORE))
 before_dtm <- DocumentTermMatrix(before_Corpus, control = list(removeStopwords=FALSE, dictionary=dict_before))
 colnames(before_dtm) <- paste("b", colnames(before_dtm), sep = "_")
@@ -62,6 +61,18 @@ colnames(between_dtm) <- paste("i", colnames(between_dtm), sep = "_")
 after_Corpus = Corpus(VectorSource(testset$AFTER))
 after_dtm <- DocumentTermMatrix(after_Corpus, control = list(removeStopwords=FALSE, dictionary=dict_after))
 colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
+
+# before_Corpus = Corpus(VectorSource(testset$BEFORE))
+# before_dtm <- DocumentTermMatrix(before_Corpus, control = list(removeStopwords=FALSE, dictionary=dict_before))
+# colnames(before_dtm) <- paste("b", colnames(before_dtm), sep = "_")
+
+# between_Corpus = Corpus(VectorSource(testset$BETWEEN))
+# between_dtm <- DocumentTermMatrix(between_Corpus, control = list(removeStopwords=FALSE, dictionary=dict_between))
+# colnames(between_dtm) <- paste("i", colnames(between_dtm), sep = "_")
+
+# after_Corpus = Corpus(VectorSource(testset$AFTER))
+# after_dtm <- DocumentTermMatrix(after_Corpus, control = list(removeStopwords=FALSE, dictionary=dict_after))
+# colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
 
 extracted_features <- cbind(before_dtm, between_dtm, after_dtm)
 
