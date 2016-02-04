@@ -214,8 +214,5 @@ BEGIN
 
 	result <-as.data.frame(result)
 	colnames(result) <- c("DDI", "E1_ID", "E2_ID")
-
-	stat <-as.data.frame(matrix(c("example", 1.0), nrow=1, ncol=2) )
-	colnames(stat) <- c("NAME", "VALUE")
 END;
 
