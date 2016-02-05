@@ -75,7 +75,7 @@ BEGIN
 	#### binarize target values
 
 	levels(ddi)[match('NONE',levels(ddi))] <- FALSE
-	levels(ddi)[match(c('advise','int','mechanism','effect'),levels(ddi))] <- TRUE
+	levels(ddi)[match(c('DDI-advise','DDI-int','DDI-mechanism','DDI-effect'),levels(ddi))] <- TRUE
 
 	svm.model <- svm(x = extracted_features, y=ddi, type="C-classification", cost = 8, gamma = 0.5)
 
@@ -198,7 +198,7 @@ BEGIN
 	result<-cbind(svm.pred.binary, data[,c(1,2)])
 
 	colnames(result)[1] <- "DDI"
-	levels(result$DDI) <- c(levels(result$DDI), 'advise','int','mechanism','effect', 'NONE')
+	levels(result$DDI) <- c(levels(result$DDI), 'DDI-advise','DDI-int','DDI-mechanism','DDI-effect', 'NONE')
 
 	#### multi classification where binary classified as true
 	true_index <- which(svm.pred.binary == TRUE)
