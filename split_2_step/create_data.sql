@@ -9,8 +9,10 @@ CREATE TYPE T_PREDICT_INPUT AS TABLE (E1_ID VARCHAR(255), E2_ID VARCHAR(255), "B
 DROP TABLE TD_CLASSES;
 CREATE COLUMN TABLE TD_CLASSES LIKE T_TD_CLASSES;
 
-DROP TABLE TD_CLASSES_SAMPLED;
-CREATE COLUMN TABLE TD_CLASSES_SAMPLED LIKE T_TD_CLASSES;
+DROP TABLE TD_CLASSES_TRAIN;
+DROP TABLE TD_CLASSES_TEST;
+CREATE COLUMN TABLE TD_CLASSES_TRAIN LIKE T_TD_CLASSES;
+CREATE COLUMN TABLE TD_CLASSES_TEST LIKE T_TD_CLASSES;
 
 
 INSERT INTO TD_CLASSES
@@ -76,8 +78,6 @@ FROM (
 				(FTI2.TA_COUNTER -3 <= FTI.TA_COUNTER AND FTI.TA_COUNTER <= FTI2.TA_COUNTER +3)
 			)
 
-			--AND FTI.ID = 'DDI-DrugBank.d0' OR FTI.ID = 'DDI-DrugBank.d1' OR FTI.ID = 'DDI-DrugBank.d3'
-
 			ORDER BY FTI.TA_COUNTER
 		)
 	)
@@ -88,8 +88,10 @@ GROUP BY E1_ID, E2_ID, DDI;
 
 
 
+
+
 DROP PROCEDURE DOWNSAMPLE_R;
-CREATE PROCEDURE DOWNSAMPLE_R(IN data T_TD_CLASSES, OUT sampled T_TD_CLASSES)
+CREATE PROCEDURE DOWNSAMPLE_R(IN data T_TD_CLASSES, OUT train_data T_TD_CLASSES, OUT test_data T_TD_CLASSES)
 LANGUAGE RLANG AS
 BEGIN
 	#### down sampling
@@ -99,7 +101,12 @@ BEGIN
 	false_downsampled_index <- sample(1:nrow(false_pairs), nrow(true_pairs))
 	false_downsampled <- false_pairs[false_downsampled_index,]
 
-	sampled<-rbind(true_pairs, false_downsampled)
+	sampled <- rbind(true_pairs, false_downsampled)
+
+	index <- 1:nrow(sampled)
+	testindex <- sample(index, trunc(length(index)/10))
+	test_data <- sampled[testindex,]
+	train_data <- sampled[-testindex,]
 END;
 
 DROP PROCEDURE DOWNSAMPLE;
@@ -107,9 +114,13 @@ CREATE PROCEDURE DOWNSAMPLE()
 LANGUAGE SQLSCRIPT AS
 BEGIN
     data = SELECT * FROM TD_CLASSES;
-    CALL FOO_R(:data, T_TD_CLASSES);
-    INSERT INTO TD_CLASSES_SAMPLED SELECT * FROM :T_TD_CLASSES;
+    CALL DOWNSAMPLE_R(:data, train_data, test_data);
+    INSERT INTO TD_CLASSES_TRAIN SELECT * FROM :train_data;
+    INSERT INTO TD_CLASSES_TEST SELECT * FROM :test_data;
 END;
 
 CALL DOWNSAMPLE();
+
+SELECT COUNT(*) FROM TD_CLASSES_TRAIN;
+SELECT COUNT(*) FROM TD_CLASSES_TEST;
 
