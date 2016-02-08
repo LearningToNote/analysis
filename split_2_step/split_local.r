@@ -21,7 +21,13 @@ testindex <- sample(index, trunc(length(index)/10))
 testset <- data[testindex,]
 trainset <- data[-testindex,]
 
+
+
+########## TRAINING
+
 data <- trainset
+
+########## BINARY CLASSIFICATION
 
 #### feature extraction
 
@@ -53,19 +59,31 @@ levels(ddi)[match(c('advise','int','mechanism','effect'),levels(ddi))] <- TRUE
 svm.model.binary <- svm(x = extracted_features, y=ddi, type="C-classification", cost = 8, gamma = 0.5)
 
 
-##############################
+########## MULTI CLASS CLASSIFICATION
+
+data <- data[data$DDI != "NONE",]
+
+
+before_Corpus = Corpus(VectorSource(data$BEFORE))
+before_dtm <- DocumentTermMatrix(before_Corpus, control = list(removeStopwords=FALSE, dictionary=dict_before))
+colnames(before_dtm) <- paste("b", colnames(before_dtm), sep = "_")
+
+between_Corpus = Corpus(VectorSource(data$BETWEEN))
+between_dtm <- DocumentTermMatrix(between_Corpus, control = list(removeStopwords=FALSE, dictionary=dict_between))
+colnames(between_dtm) <- paste("i", colnames(between_dtm), sep = "_")
+
+after_Corpus = Corpus(VectorSource(data$AFTER))
+after_dtm <- DocumentTermMatrix(after_Corpus, control = list(removeStopwords=FALSE, dictionary=dict_after))
+colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
+
+extracted_features <- cbind(before_dtm, between_dtm, after_dtm)
+
 ddi <- data$DDI
 ddi <- as.factor(ddi)
-extracted_features <- extracted_features[data$DDI != "NONE",]
-ddi <- ddi[-which(ddi == "NONE")]
+
 ddi <- droplevels(ddi)
 
 svm.model.classes <- svm(x = extracted_features, y=ddi, type="C-classification", cost = 8, gamma = 0.5)
-
-
-
-
-
 
 
 
