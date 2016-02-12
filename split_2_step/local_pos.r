@@ -1,6 +1,5 @@
 
 
-
 library(tm)
 library(e1071)
 library(SparseM)
@@ -55,21 +54,21 @@ colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
 
 
 p_before_Corpus = Corpus(VectorSource(data$P_BEFORE))
-p_before_dtm <- DocumentTermMatrix(p_before_Corpus, control = list(wordLengths=c(1,Inf)))
+p_before_dtm <- DocumentTermMatrix(p_before_Corpus, control = list(wordLengths=c(1,Inf), tokenize = BigramTokenizer))
 p_dict_before <- Terms(p_before_dtm)
 colnames(p_before_dtm) <- paste("pb", colnames(p_before_dtm), sep = "_")
 
 p_between_Corpus = Corpus(VectorSource(data$P_BETWEEN))
-p_between_dtm <- DocumentTermMatrix(p_between_Corpus, control = list(wordLengths=c(1,Inf)))
+p_between_dtm <- DocumentTermMatrix(p_between_Corpus, control = list(wordLengths=c(1,Inf), tokenize = BigramTokenizer))
 p_dict_between <- Terms(p_between_dtm)
 colnames(p_between_dtm) <- paste("pi", colnames(p_between_dtm), sep = "_")
 
 p_after_Corpus = Corpus(VectorSource(data$P_AFTER))
-p_after_dtm <- DocumentTermMatrix(p_after_Corpus, control = list(wordLengths=c(1,Inf)))
+p_after_dtm <- DocumentTermMatrix(p_after_Corpus, control = list(wordLengths=c(1,Inf), tokenize = BigramTokenizer))
 p_dict_after <- Terms(p_after_dtm)
 colnames(p_after_dtm) <- paste("pa", colnames(p_after_dtm), sep = "_")
 
-extracted_features <- cbind(before_dtm, between_dtm, after_dtm)
+extracted_features <- cbind(before_dtm, between_dtm, after_dtm, p_before_dtm, p_between_dtm, p_after_dtm)
 
 ddi <- data$DDI
 ddi <- as.factor(ddi)
@@ -79,8 +78,7 @@ ddi <- as.factor(ddi)
 levels(ddi)[match('NONE',levels(ddi))] <- FALSE
 levels(ddi)[match(c('advise','int','mechanism','effect'),levels(ddi))] <- TRUE
 
-svm.model.binary <- svm(x = extracted_features, y=ddi, type="C-classification", cost = 8, gamma = 0.5)
-
+svm.model.binary <- svm(x = extracted_features, y=ddi, type="C-classification", cost = 10, gamma = 0.5)
 
 
 ########## MULTI CLASS CLASSIFICATION
@@ -130,19 +128,14 @@ p_after_dtm <- DocumentTermMatrix(p_after_Corpus, control = list(
 )
 colnames(p_after_dtm) <- paste("pa", colnames(p_after_dtm), sep = "_")
 
-extracted_features <- cbind(before_dtm, between_dtm, after_dtm)
+extracted_features <- cbind(before_dtm, between_dtm, after_dtm, p_before_dtm, p_between_dtm, p_after_dtm)
 
 ddi <- data$DDI
 ddi <- as.factor(ddi)
 
 ddi <- droplevels(ddi)
 
-svm.model.classes <- svm(x = extracted_features, y=ddi, type="C-classification", cost = 8, gamma = 0.5)
-
-##############################
-# obj <- tune(svm, train.x = extracted_features, train.y=ddi, tunecontrol = tune.control(sampling = "cross", cross = 7), ranges = list(gamma=2^(-1:1), cost=2^(2:5)))
-# summary(obj)
-##############################
+svm.model.classes <- svm(x = extracted_features, y=ddi, type="C-classification", cost = 10, gamma = 0.5)
 
 
 
@@ -194,7 +187,7 @@ p_after_dtm <- DocumentTermMatrix(p_after_Corpus, control = list(
 )
 colnames(p_after_dtm) <- paste("pa", colnames(p_after_dtm), sep = "_")
 
-extracted_features <- cbind(before_dtm, between_dtm, after_dtm)
+extracted_features <- cbind(before_dtm, between_dtm, after_dtm, p_before_dtm, p_between_dtm, p_after_dtm)
 
 
 svm.pred.binary <- predict(svm.model.binary, extracted_features)
@@ -217,6 +210,3 @@ colnames(test) <- c('pred', 'real')
 # accuracy <- nrow(test[which(test$pred == test$real),]) / nrow(test)
 # accuracy
 confusionMatrix(test$pred, test$real)
-
-
-
