@@ -37,18 +37,17 @@ BEGIN
     }
 	########################
 
-	library(tm)
-	library(e1071)
-	library(SparseM)
+	library(RTextTools)
 
 	#### down sampling
-	true_pairs <- data[data$DDI != "NONE",]
-	false_pairs <- data[data$DDI == "NONE",]
+	true_pairs <- data[data$DDI != "5",]
+	false_pairs <- data[data$DDI == "5",]
 
 	false_downsampled_index <- sample(1:nrow(false_pairs), nrow(true_pairs))
 	false_downsampled <- false_pairs[false_downsampled_index,]
 
-	data<-rbind(true_pairs, false_downsampled)
+	data <- rbind(true_pairs, false_downsampled)
+	data <- data[sample(nrow(data)),]
 
 	#### feature extraction
 

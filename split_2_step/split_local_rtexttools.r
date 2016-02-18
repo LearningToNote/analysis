@@ -37,10 +37,37 @@ o_after_dtm <- after_dtm
 colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
 
 features <- cbind(before_dtm, between_dtm, after_dtm)
+ddi <- data$DDI
 
-container <- create_container(features,data$DDI,trainSize=1:nrow(data),virgin=FALSE)
+#### binarize target values
 
-models <- train_models(container, algorithms=c("SVM"), method = "C-classification")
+ddi[ddi != 5] <- 1
+ddi[ddi == 5] <- 0
+container <- create_container(features,ddi,trainSize=1:nrow(data),virgin=FALSE)
+
+svm.model.binary <- train_models(container, algorithms=c("SVM"), method = "C-classification")
+
+########## MULTI CLASS TRAINING
+
+data <- data[data$DDI != 5,]
+
+
+before_dtm <- create_matrix(data$BEFORE, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf, originalMatrix=o_before_dtm)
+colnames(before_dtm) <- paste("b", colnames(before_dtm), sep = "_")
+between_dtm <- create_matrix(data$BETWEEN, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf, originalMatrix=o_between_dtm)
+colnames(between_dtm) <- paste("i", colnames(between_dtm), sep = "_")
+after_dtm <- create_matrix(data$AFTER, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf, originalMatrix=o_after_dtm)
+colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
+
+features <- cbind(before_dtm, between_dtm, after_dtm)
+ddi <- data$DDI
+
+container <- create_container(features,ddi,trainSize=1:nrow(data),virgin=FALSE)
+
+svm.model.classes <- train_models(container, algorithms=c("SVM"), method = "C-classification")
+
+
+
 
 
 ##################################################################
@@ -59,13 +86,31 @@ features <- cbind(before_dtm, between_dtm, after_dtm)
 
 container <- create_container(features,labels=testset[,1],testSize=1:nrow(data),virgin=FALSE)
 
-results <- classify_models(container,models)
+svm.pred.binary <- classify_models(container,svm.model.binary)
+
+results <- svm.pred.binary
+
+
+true_index <- which(results$SVM_LABEL == 1)
+container <- create_container(features[true_index,],labels=rep(0, length(true_index)),testSize=1:length(true_index),virgin=FALSE)
+
+svm.pred.classes <- classify_models(container, svm.model.classes)
+
+levels(results$SVM_LABEL) <- c(levels(result$DDI), 0, 1, 2, 3, 4, 5)
+results[true_index,] <- svm.pred.classes
+results[-true_index,] <- 5
+results <- droplevels(results)
 
 
 
+############### EVAL
+container <- create_container(features,labels=testset[,1],testSize=1:nrow(data),virgin=FALSE)
 analytics <- create_analytics(container, results)
 analytics@algorithm_summary
 
 table(results$SVM_LABEL, testset[,1])
+################
 
 
+result<-cbind(results[,1], data[,c(1,2)])
+colnames(result)[1] <- "DDI"

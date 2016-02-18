@@ -83,7 +83,7 @@ svm.model.binary <- svm(x = extracted_features, y=ddi, type="C-classification", 
 
 
 
-########## MULTI CLASS CLASSIFICATION
+########## MULTI CLASS TRAIN
 
 data <- data[data$DDI != "NONE",]
 
