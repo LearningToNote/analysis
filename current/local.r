@@ -1,8 +1,7 @@
 
 library(RTextTools)
 
-data <- read.csv('/home/johannes/code/masterproject/data/data_numeric.csv')
-# data <- read.csv('/home/Johannes.Jasper/data.csv')
+data <- read.csv('/home/johannes/code/masterproject/data/data.csv')
 
 #### down sampling
 true_pairs <- data[data$DDI != -1,]
@@ -48,7 +47,12 @@ p_after_dtm <- create_matrix(data$P_AFTER, minWordLength=1, removeStopwords=FALS
 o_p_after_dtm <- p_after_dtm
 colnames(p_after_dtm) <- paste("pa", colnames(p_after_dtm), sep = "_")
 
-features <- cbind(before_dtm, between_dtm, after_dtm, p_before_dtm, p_between_dtm, p_after_dtm)
+features <- cbind(
+		before_dtm, between_dtm, after_dtm,
+		p_before_dtm, p_between_dtm, p_after_dtm,
+		data$E1_TYPE, data$E2_TYPE,
+		data$DIST)
+
 ddi <- data$DDI
 
 #### binarize target values
@@ -94,7 +98,12 @@ p_after_dtm <- create_matrix(
 colnames(p_after_dtm) <- paste("pa", colnames(p_after_dtm), sep = "_")
 
 
-features <- cbind(before_dtm, between_dtm, after_dtm, p_before_dtm, p_between_dtm, p_after_dtm)
+features <- cbind(
+		before_dtm, between_dtm, after_dtm,
+		p_before_dtm, p_between_dtm, p_after_dtm,
+		data$E1_TYPE, data$E2_TYPE,
+		data$DIST)
+
 ddi <- data$DDI
 
 container <- create_container(features,ddi,trainSize=1:nrow(data),virgin=FALSE)
@@ -140,7 +149,12 @@ p_after_dtm <- create_matrix(
 colnames(p_after_dtm) <- paste("pa", colnames(p_after_dtm), sep = "_")
 
 
-features <- cbind(before_dtm, between_dtm, after_dtm, p_before_dtm, p_between_dtm, p_after_dtm)
+features <- cbind(
+		before_dtm, between_dtm, after_dtm,
+		p_before_dtm, p_between_dtm, p_after_dtm,
+		data$E1_TYPE, data$E2_TYPE,
+		data$DIST)
+
 container <- create_container(features,labels=rep(0,nrow(data)),testSize=1:nrow(data),virgin=FALSE)
 
 svm.pred.binary <- classify_models(container,svm.model.binary)

@@ -18,9 +18,6 @@ CREATE COLUMN TABLE MODELS LIKE T_MODELS;
 DROP TYPE T_RESULTS;
 CREATE TYPE T_RESULTS AS TABLE (DDI INT, E1_ID VARCHAR(255), E2_ID VARCHAR(255));
 
-DROP TYPE T_R_STAT;
-CREATE TYPE T_R_STAT AS TABLE (NAME VARCHAR(255), VALUE DOUBLE);
-
 
 DROP PROCEDURE R_TRAIN_BINARY;
 CREATE PROCEDURE R_TRAIN_BINARY(IN data T_TD_CLASSES, OUT model T_MODELS)
@@ -87,7 +84,11 @@ BEGIN
 	o_p_after_dtm <- p_after_dtm
 	colnames(p_after_dtm) <- paste("pa", colnames(p_after_dtm), sep = "_")
 
-	features <- cbind(before_dtm, between_dtm, after_dtm, p_before_dtm, p_between_dtm, p_after_dtm)
+	features <- cbind(
+		before_dtm, between_dtm, after_dtm,
+		p_before_dtm, p_between_dtm, p_after_dtm,
+		data$E1_TYPE, data$E2_TYPE,
+		data$DIST)
 
 
 	ddi <- data$DDI
@@ -175,7 +176,12 @@ BEGIN
 		originalMatrix=o_p_after_dtm)
 	colnames(p_after_dtm) <- paste("pa", colnames(p_after_dtm), sep = "_")
 
-	features <- cbind(before_dtm, between_dtm, after_dtm, p_before_dtm, p_between_dtm, p_after_dtm)
+	features <- cbind(
+		before_dtm, between_dtm, after_dtm,
+		p_before_dtm, p_between_dtm, p_after_dtm,
+		data$E1_TYPE, data$E2_TYPE,
+		data$DIST)
+
 	ddi <- data$DDI
 
 	container <- create_container(features,ddi,trainSize=1:nrow(data),virgin=FALSE)
@@ -248,7 +254,11 @@ BEGIN
 		originalMatrix=o_p_after_dtm)
 	colnames(p_after_dtm) <- paste("pa", colnames(p_after_dtm), sep = "_")
 
-	features <- cbind(before_dtm, between_dtm, after_dtm, p_before_dtm, p_between_dtm, p_after_dtm)
+	features <- cbind(
+		before_dtm, between_dtm, after_dtm,
+		p_before_dtm, p_between_dtm, p_after_dtm,
+		data$E1_TYPE, data$E2_TYPE,
+		data$DIST)
 
 	#### binary classification
 	## creates results 1: relation, 0: no relation
