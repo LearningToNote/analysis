@@ -37,7 +37,18 @@ after_dtm <- create_matrix(data$AFTER, minWordLength=2, removeStopwords=FALSE, w
 o_after_dtm <- after_dtm
 colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
 
-features <- cbind(before_dtm, between_dtm, after_dtm)
+
+p_before_dtm <- create_matrix(data$P_BEFORE, minWordLength=1, removeStopwords=FALSE)
+o_p_before_dtm <- p_before_dtm
+colnames(p_before_dtm) <- paste("pb", colnames(p_before_dtm), sep = "_")
+p_between_dtm <- create_matrix(data$P_BETWEEN, minWordLength=1, removeStopwords=FALSE)
+o_p_between_dtm <- p_between_dtm
+colnames(p_between_dtm) <- paste("pi", colnames(p_between_dtm), sep = "_")
+p_after_dtm <- create_matrix(data$P_AFTER, minWordLength=1, removeStopwords=FALSE)
+o_p_after_dtm <- p_after_dtm
+colnames(p_after_dtm) <- paste("pa", colnames(p_after_dtm), sep = "_")
+
+features <- cbind(before_dtm, between_dtm, after_dtm, p_before_dtm, p_between_dtm, p_after_dtm)
 ddi <- data$DDI
 
 #### binarize target values
@@ -60,7 +71,30 @@ colnames(between_dtm) <- paste("i", colnames(between_dtm), sep = "_")
 after_dtm <- create_matrix(data$AFTER, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf, originalMatrix=o_after_dtm)
 colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
 
-features <- cbind(before_dtm, between_dtm, after_dtm)
+
+p_before_dtm <- create_matrix(
+	data$P_BEFORE,
+	minWordLength=1,
+	removeStopwords=FALSE,
+	originalMatrix=o_p_before_dtm)
+colnames(p_before_dtm) <- paste("pb", colnames(p_before_dtm), sep = "_")
+
+p_between_dtm <- create_matrix(
+	data$P_BETWEEN,
+	minWordLength=1,
+	removeStopwords=FALSE,
+	originalMatrix=o_p_between_dtm)
+colnames(p_between_dtm) <- paste("pi", colnames(p_between_dtm), sep = "_")
+
+p_after_dtm <- create_matrix(
+	data$P_AFTER,
+	minWordLength=1,
+	removeStopwords=FALSE,
+	originalMatrix=o_p_after_dtm)
+colnames(p_after_dtm) <- paste("pa", colnames(p_after_dtm), sep = "_")
+
+
+features <- cbind(before_dtm, between_dtm, after_dtm, p_before_dtm, p_between_dtm, p_after_dtm)
 ddi <- data$DDI
 
 container <- create_container(features,ddi,trainSize=1:nrow(data),virgin=FALSE)
@@ -83,8 +117,30 @@ colnames(between_dtm) <- paste("i", colnames(between_dtm), sep = "_")
 after_dtm <- create_matrix(data$AFTER, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf, originalMatrix=o_after_dtm)
 colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
 
-features <- cbind(before_dtm, between_dtm, after_dtm)
 
+p_before_dtm <- create_matrix(
+	data$P_BEFORE,
+	minWordLength=1,
+	removeStopwords=FALSE,
+	originalMatrix=o_p_before_dtm)
+colnames(p_before_dtm) <- paste("pb", colnames(p_before_dtm), sep = "_")
+
+p_between_dtm <- create_matrix(
+	data$P_BETWEEN,
+	minWordLength=1,
+	removeStopwords=FALSE,
+	originalMatrix=o_p_between_dtm)
+colnames(p_between_dtm) <- paste("pi", colnames(p_between_dtm), sep = "_")
+
+p_after_dtm <- create_matrix(
+	data$P_AFTER,
+	minWordLength=1,
+	removeStopwords=FALSE,
+	originalMatrix=o_p_after_dtm)
+colnames(p_after_dtm) <- paste("pa", colnames(p_after_dtm), sep = "_")
+
+
+features <- cbind(before_dtm, between_dtm, after_dtm, p_before_dtm, p_between_dtm, p_after_dtm)
 container <- create_container(features,labels=rep(0,nrow(data)),testSize=1:nrow(data),virgin=FALSE)
 
 svm.pred.binary <- classify_models(container,svm.model.binary)

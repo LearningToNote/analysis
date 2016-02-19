@@ -5,9 +5,12 @@ CREATE TYPE T_MODELS AS TABLE (
 	ID INTEGER,
 	DESCRIPTION VARCHAR(255),
 	MODEL BLOB,
-	DICT_BEFORE BLOB,
-	DICT_BETWEEN BLOB,
-	DICT_AFTER BLOB
+	MATRIX_BEFORE BLOB,
+	MATRIX_BETWEEN BLOB,
+	MATRIX_AFTER BLOB,
+	MATRIX_P_BEFORE BLOB,
+	MATRIX_P_BETWEEN BLOB,
+	MATRIX_P_AFTER BLOB
 );
 DROP TABLE MODELS;
 CREATE COLUMN TABLE MODELS LIKE T_MODELS;
@@ -63,7 +66,28 @@ BEGIN
 	o_after_dtm <- after_dtm
 	colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
 
-	features <- cbind(before_dtm, between_dtm, after_dtm)
+	p_before_dtm <- create_matrix(
+		data$P_BEFORE,
+		minWordLength=1,
+		removeStopwords=FALSE)
+	o_p_before_dtm <- p_before_dtm
+	colnames(p_before_dtm) <- paste("pb", colnames(p_before_dtm), sep = "_")
+
+	p_between_dtm <- create_matrix(
+		data$P_BETWEEN,
+		minWordLength=1,
+		removeStopwords=FALSE)
+	o_p_between_dtm <- p_between_dtm
+	colnames(p_between_dtm) <- paste("pi", colnames(p_between_dtm), sep = "_")
+
+	p_after_dtm <- create_matrix(
+		data$P_AFTER,
+		minWordLength=1,
+		removeStopwords=FALSE)
+	o_p_after_dtm <- p_after_dtm
+	colnames(p_after_dtm) <- paste("pa", colnames(p_after_dtm), sep = "_")
+
+	features <- cbind(before_dtm, between_dtm, after_dtm, p_before_dtm, p_between_dtm, p_after_dtm)
 
 
 	ddi <- data$DDI
@@ -79,10 +103,13 @@ BEGIN
 	model <- data.frame(
 		ID = c(1),
 		DESCRIPTION = c('binary classification'),
-		MODEL = generateRobjColumn(svm.model),
-		DICT_BEFORE = generateRobjColumn(o_before_dtm),
-		DICT_BETWEEN = generateRobjColumn(o_between_dtm),
-		DICT_AFTER = generateRobjColumn(o_after_dtm)
+		MODEL = generateRobjColumn(svm.model.binary),
+		MATRIX_BEFORE = generateRobjColumn(o_before_dtm),
+		MATRIX_BETWEEN = generateRobjColumn(o_between_dtm),
+		MATRIX_AFTER = generateRobjColumn(o_after_dtm),
+		MATRIX_P_BEFORE = generateRobjColumn(o_p_before_dtm),
+		MATRIX_P_BETWEEN = generateRobjColumn(o_p_between_dtm),
+		MATRIX_P_AFTER = generateRobjColumn(o_p_after_dtm)
 	)
 END;
 
@@ -111,9 +138,12 @@ BEGIN
 	#data <- data[data$DDI != -1,]
 
 	#### retrieve dictionaries from binary classification
-	o_before_dtm <- unserialize(modeltable$DICT_BEFORE[[1]])
-	o_between_dtm <- unserialize(modeltable$DICT_BETWEEN[[1]])
-	o_after_dtm <- unserialize(modeltable$DICT_AFTER[[1]])
+	o_before_dtm <- unserialize(modeltable$MATRIX_BEFORE[[1]])
+	o_between_dtm <- unserialize(modeltable$MATRIX_BETWEEN[[1]])
+	o_after_dtm <- unserialize(modeltable$MATRIX_AFTER[[1]])
+	o_p_before_dtm <- unserialize(modeltable$MATRIX_P_BEFORE[[1]])
+	o_p_between_dtm <- unserialize(modeltable$MATRIX_P_BETWEEN[[1]])
+	o_p_after_dtm <- unserialize(modeltable$MATRIX_P_AFTER[[1]])
 
 	#### feature extraction
 
@@ -124,7 +154,28 @@ BEGIN
 	after_dtm <- create_matrix(data$AFTER, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf, originalMatrix=o_after_dtm)
 	colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
 
-	features <- cbind(before_dtm, between_dtm, after_dtm)
+	p_before_dtm <- create_matrix(
+		data$P_BEFORE,
+		minWordLength=1,
+		removeStopwords=FALSE,
+		originalMatrix=o_p_before_dtm)
+	colnames(p_before_dtm) <- paste("pb", colnames(p_before_dtm), sep = "_")
+
+	p_between_dtm <- create_matrix(
+		data$P_BETWEEN,
+		minWordLength=1,
+		removeStopwords=FALSE,
+		originalMatrix=o_p_between_dtm)
+	colnames(p_between_dtm) <- paste("pi", colnames(p_between_dtm), sep = "_")
+
+	p_after_dtm <- create_matrix(
+		data$P_AFTER,
+		minWordLength=1,
+		removeStopwords=FALSE,
+		originalMatrix=o_p_after_dtm)
+	colnames(p_after_dtm) <- paste("pa", colnames(p_after_dtm), sep = "_")
+
+	features <- cbind(before_dtm, between_dtm, after_dtm, p_before_dtm, p_between_dtm, p_after_dtm)
 	ddi <- data$DDI
 
 	container <- create_container(features,ddi,trainSize=1:nrow(data),virgin=FALSE)
@@ -136,9 +187,12 @@ BEGIN
 		ID = c(2),
 		DESCRIPTION = c('multi class classification'),
 		MODEL = generateRobjColumn(svm.model.classes),
-		DICT_BEFORE = generateRobjColumn(NULL),
-		DICT_BETWEEN = generateRobjColumn(NULL),
-		DICT_AFTER = generateRobjColumn(NULL)
+		MATRIX_BEFORE = generateRobjColumn(NULL),
+		MATRIX_BETWEEN = generateRobjColumn(NULL),
+		MATRIX_AFTER = generateRobjColumn(NULL),
+		MATRIX_P_BEFORE = generateRobjColumn(NULL),
+		MATRIX_P_BETWEEN = generateRobjColumn(NULL),
+		MATRIX_P_AFTER = generateRobjColumn(NULL)
 	)
 
 END;
@@ -154,9 +208,12 @@ BEGIN
 
 
 	#### retrieve dictionaries
-	o_before_dtm <- unserialize(modeltable$DICT_BEFORE[[1]])
-	o_between_dtm <- unserialize(modeltable$DICT_BETWEEN[[1]])
-	o_after_dtm <- unserialize(modeltable$DICT_AFTER[[1]])
+	o_before_dtm <- unserialize(modeltable$MATRIX_BEFORE[[1]])
+	o_between_dtm <- unserialize(modeltable$MATRIX_BETWEEN[[1]])
+	o_after_dtm <- unserialize(modeltable$MATRIX_AFTER[[1]])
+	o_p_before_dtm <- unserialize(modeltable$MATRIX_P_BEFORE[[1]])
+	o_p_between_dtm <- unserialize(modeltable$MATRIX_P_BETWEEN[[1]])
+	o_p_after_dtm <- unserialize(modeltable$MATRIX_P_AFTER[[1]])
 
 	#### retrieve models
 	svm.model.binary <- unserialize(modeltable$MODEL[[1]])
@@ -170,7 +227,28 @@ BEGIN
 	after_dtm <- create_matrix(data$AFTER, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf, originalMatrix=o_after_dtm)
 	colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
 
-	features <- cbind(before_dtm, between_dtm, after_dtm)
+	p_before_dtm <- create_matrix(
+		data$P_BEFORE,
+		minWordLength=1,
+		removeStopwords=FALSE,
+		originalMatrix=o_p_before_dtm)
+	colnames(p_before_dtm) <- paste("pb", colnames(p_before_dtm), sep = "_")
+
+	p_between_dtm <- create_matrix(
+		data$P_BETWEEN,
+		minWordLength=1,
+		removeStopwords=FALSE,
+		originalMatrix=o_p_between_dtm)
+	colnames(p_between_dtm) <- paste("pi", colnames(p_between_dtm), sep = "_")
+
+	p_after_dtm <- create_matrix(
+		data$P_AFTER,
+		minWordLength=1,
+		removeStopwords=FALSE,
+		originalMatrix=o_p_after_dtm)
+	colnames(p_after_dtm) <- paste("pa", colnames(p_after_dtm), sep = "_")
+
+	features <- cbind(before_dtm, between_dtm, after_dtm, p_before_dtm, p_between_dtm, p_after_dtm)
 
 	#### binary classification
 	## creates results 1: relation, 0: no relation
