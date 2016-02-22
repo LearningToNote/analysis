@@ -13,10 +13,20 @@ false_downsampled <- false_pairs[false_downsampled_index,]
 data <- rbind(true_pairs, false_downsampled)
 data <- data[sample(nrow(data)),]
 
-index <- 1:nrow(data)
-testindex <- sample(index, trunc(length(index)/10))
-testset <- data[testindex,]
-trainset <- data[-testindex,]
+
+
+docs <- unique(data$DOC_ID)
+testdocs <- sample(docs, trunc(length(docs)/10))
+
+testrows <- which(data$DOC_ID %in% testdocs)
+test_data <- data[testrows,]
+train_data <- data[-testrows,]
+
+
+# index <- 1:nrow(data)
+# testindex <- sample(index, trunc(length(index)/10))
+# testset <- data[testindex,]
+# trainset <- data[-testindex,]
 
 ########## TRAINING
 
@@ -27,24 +37,24 @@ data <- trainset
 #### feature extraction
 
 before_dtm <- create_matrix(data$BEFORE, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf)
-o_before_dtm <- before_dtm
+o_before_dtm <- before_dtm[1,]
 colnames(before_dtm) <- paste("b", colnames(before_dtm), sep = "_")
 between_dtm <- create_matrix(data$BETWEEN, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf)
-o_between_dtm <- between_dtm
+o_between_dtm <- between_dtm[1,]
 colnames(between_dtm) <- paste("i", colnames(between_dtm), sep = "_")
 after_dtm <- create_matrix(data$AFTER, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf)
-o_after_dtm <- after_dtm
+o_after_dtm <- after_dtm[1,]
 colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
 
 
 p_before_dtm <- create_matrix(data$P_BEFORE, minWordLength=1, removeStopwords=FALSE)
-o_p_before_dtm <- p_before_dtm
+o_p_before_dtm <- p_before_dtm[1,]
 colnames(p_before_dtm) <- paste("pb", colnames(p_before_dtm), sep = "_")
 p_between_dtm <- create_matrix(data$P_BETWEEN, minWordLength=1, removeStopwords=FALSE)
-o_p_between_dtm <- p_between_dtm
+o_p_between_dtm <- p_between_dtm[1,]
 colnames(p_between_dtm) <- paste("pi", colnames(p_between_dtm), sep = "_")
 p_after_dtm <- create_matrix(data$P_AFTER, minWordLength=1, removeStopwords=FALSE)
-o_p_after_dtm <- p_after_dtm
+o_p_after_dtm <- p_after_dtm[1,]
 colnames(p_after_dtm) <- paste("pa", colnames(p_after_dtm), sep = "_")
 
 features <- cbind(

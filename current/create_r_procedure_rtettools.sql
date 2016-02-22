@@ -54,34 +54,34 @@ BEGIN
 	#### feature extraction
 
 	before_dtm <- create_matrix(data$BEFORE, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf)
-	o_before_dtm <- before_dtm
+	o_before_dtm <- before_dtm[1,]
 	colnames(before_dtm) <- paste("b", colnames(before_dtm), sep = "_")
 	between_dtm <- create_matrix(data$BETWEEN, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf)
-	o_between_dtm <- between_dtm
+	o_between_dtm <- between_dtm[1,]
 	colnames(between_dtm) <- paste("i", colnames(between_dtm), sep = "_")
 	after_dtm <- create_matrix(data$AFTER, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf)
-	o_after_dtm <- after_dtm
+	o_after_dtm <- after_dtm[1,]
 	colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
 
 	p_before_dtm <- create_matrix(
 		data$P_BEFORE,
 		minWordLength=1,
 		removeStopwords=FALSE)
-	o_p_before_dtm <- p_before_dtm
+	o_p_before_dtm <- p_before_dtm[1,]
 	colnames(p_before_dtm) <- paste("pb", colnames(p_before_dtm), sep = "_")
 
 	p_between_dtm <- create_matrix(
 		data$P_BETWEEN,
 		minWordLength=1,
 		removeStopwords=FALSE)
-	o_p_between_dtm <- p_between_dtm
+	o_p_between_dtm <- p_between_dtm[1,]
 	colnames(p_between_dtm) <- paste("pi", colnames(p_between_dtm), sep = "_")
 
 	p_after_dtm <- create_matrix(
 		data$P_AFTER,
 		minWordLength=1,
 		removeStopwords=FALSE)
-	o_p_after_dtm <- p_after_dtm
+	o_p_after_dtm <- p_after_dtm[1,]
 	colnames(p_after_dtm) <- paste("pa", colnames(p_after_dtm), sep = "_")
 
 	features <- cbind(
