@@ -19,8 +19,8 @@ docs <- unique(data$DOC_ID)
 testdocs <- sample(docs, trunc(length(docs)/10))
 
 testrows <- which(data$DOC_ID %in% testdocs)
-test_data <- data[testrows,]
-train_data <- data[-testrows,]
+test_data <- data[testrows,-1]
+train_data <- data[-testrows,-1]
 
 
 # index <- 1:nrow(data)
@@ -30,7 +30,7 @@ train_data <- data[-testrows,]
 
 ########## TRAINING
 
-data <- trainset
+data <- train_data
 
 ########## BINARY CLASSIFICATION
 
@@ -127,7 +127,7 @@ svm.model.classes <- train_models(container, algorithms=c("SVM"), method = "C-cl
 ##################################################################
 
 ########## PREDICTION
-data <- testset[,-1]
+data <- test_data[,-1]
 
 before_dtm <- create_matrix(data$BEFORE, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf, originalMatrix=o_before_dtm)
 colnames(before_dtm) <- paste("b", colnames(before_dtm), sep = "_")
@@ -185,11 +185,11 @@ results <- droplevels(results)
 
 
 ############### EVAL
-container <- create_container(features,labels=testset[,1],testSize=1:nrow(data),virgin=FALSE)
+container <- create_container(features,labels=test_data[,1],testSize=1:nrow(data),virgin=FALSE)
 analytics <- create_analytics(container, results)
 analytics@algorithm_summary
 
-table(results$SVM_LABEL, testset[,1])
+table(results$SVM_LABEL, test_data[,1])
 ################
 
 
