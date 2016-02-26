@@ -88,7 +88,7 @@ BEGIN
 		before_dtm, between_dtm, after_dtm,
 		p_before_dtm, p_between_dtm, p_after_dtm,
 		data$E1_TYPE, data$E2_TYPE,
-		data$DIST)
+		data$CHAR_DIST, data$WORD_DIST)
 
 
 	ddi <- data$DDI
@@ -180,7 +180,7 @@ BEGIN
 		before_dtm, between_dtm, after_dtm,
 		p_before_dtm, p_between_dtm, p_after_dtm,
 		data$E1_TYPE, data$E2_TYPE,
-		data$DIST)
+		data$CHAR_DIST, data$WORD_DIST)
 
 	ddi <- data$DDI
 
@@ -258,7 +258,7 @@ BEGIN
 		before_dtm, between_dtm, after_dtm,
 		p_before_dtm, p_between_dtm, p_after_dtm,
 		data$E1_TYPE, data$E2_TYPE,
-		data$DIST)
+		data$CHAR_DIST, data$WORD_DIST)
 
 	#### binary classification
 	## creates results 1: relation, 0: no relation
