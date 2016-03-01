@@ -55,7 +55,11 @@ FROM (
 			E2.TYPE_ID AS E2_TYPE,
 			O2."START" - O1."END" AS CHAR_DIST,
 			FTI2.TA_COUNTER - FTI1.TA_COUNTER AS WORD_DIST,
-			CASE WHEN FTI.TA_STEM IS NULL THEN FTI.TA_NORMALIZED ELSE FTI.TA_STEM END AS TOKEN,
+			CASE
+				WHEN FTI.TA_NORMALIZED IS NOT NULL THEN FTI.TA_NORMALIZED
+				WHEN FTI.TA_STEM IS NOT NULL THEN FTI.TA_STEM
+				ELSE FTI.TA_TOKEN
+			END AS TOKEN,
 			POSTAGS.ID as POS,
 			CASE
 			    WHEN FTI.TA_COUNTER < FTI1.TA_COUNTER THEN -1
@@ -74,7 +78,7 @@ FROM (
 			JOIN LEARNING_TO_NOTE."$TA_FTI" FTI ON FTI.ID = UD.DOCUMENT_ID
 			JOIN LEARNING_TO_NOTE.POS_TAGS POSTAGS ON FTI.TA_TYPE = POSTAGS.POS
 			WHERE UD.USER_ID = 'DDI-IMPORTER'
-			AND FTI.TA_TYPE <> 'punctuation'
+			AND (FTI.TA_TYPE <> 'punctuation' OR FTI.TA_TOKEN=':')
 			AND FTI1.TA_SENTENCE = FTI2.TA_SENTENCE
 			AND FTI.TA_SENTENCE = FTI1.TA_SENTENCE
 			AND FTI.TA_COUNTER <> FTI1.TA_COUNTER
@@ -99,13 +103,13 @@ BEGIN
 	true_pairs <- data[data$DDI != -1,]
 	false_pairs <- data[data$DDI == -1,]
 
-	false_downsampled_index <- sample(1:nrow(false_pairs), nrow(true_pairs))
+	false_downsampled_index <- sample(1:nrow(false_pairs), nrow(true_pairs) * 1.5)
 	false_downsampled <- false_pairs[false_downsampled_index,]
 
 	sampled <- rbind(true_pairs, false_downsampled)
 
 	docs <- unique(sampled$DOC_ID)
-	testdocs <- sample(docs, 20))
+	testdocs <- sample(docs, 20)
 
 	testrows <- which(sampled$DOC_ID %in% testdocs)
 	test_data <- sampled[testrows,-1]
