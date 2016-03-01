@@ -99,6 +99,8 @@ DROP PROCEDURE DOWNSAMPLE_R;
 CREATE PROCEDURE DOWNSAMPLE_R(IN data T_TD_CLASSES_DOCS, OUT train_data T_TD_CLASSES, OUT test_data T_TD_CLASSES)
 LANGUAGE RLANG AS
 BEGIN
+	set.seed(as.integer(format(Sys.time(), "%s")))
+
 	#### down sampling
 	true_pairs <- data[data$DDI != -1,]
 	false_pairs <- data[data$DDI == -1,]
