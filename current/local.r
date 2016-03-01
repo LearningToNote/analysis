@@ -229,20 +229,35 @@ ltn.precision.collection <- function(data) {
 # path = '/home/johannes/code/masterproject/data/data.csv'
 path = '/Users/mariyaperchyk/Documents/python_hana/analysis/rData/data.csv'
 
-splitData <- ltn.splitCopurs(path)
-train_data = splitData$train_data
-test_data = splitData$test_data
 
-binary <- ltn.train_binary(train_data)
-svm.model.binary = binary$model
-dictionaries = binary$dictionaries
+################MULTIPLE ITERATIONS
+result = matrix(ncol=4, nrow=0)
+colnames(result) <- c('TYPE', 'PRECISION', 'RECALL', 'F_MEASURE')
 
-svm.model.classes <- ltn.train_multiclass(train_data, dictionaries)
+for(i in 1:10){
+	print ("------------------------")
+	print (i)
+	splitData <- ltn.splitCopurs(path)
+	train_data = splitData$train_data
+	test_data = splitData$test_data
 
-predicted <- ltn.predict(svm.model.binary, svm.model.classes, test_data[,-1], dictionaries)
-predicted <- predicted[,1]
-actual <- test_data[,1]
+	print('training binary')
+	binary <- ltn.train_binary(train_data)
+	svm.model.binary = binary$model
+	dictionaries = binary$dictionaries
 
-ltn.precision.collection(cbind(actual, as.data.frame(predicted)))
+	print('training multiclass')
+	svm.model.classes <- ltn.train_multiclass(train_data, dictionaries)
 
+	print('predicting')
+	predicted <- ltn.predict(svm.model.binary, svm.model.classes, test_data[,-1], dictionaries)
+	predicted <- predicted[,1]
+	actual <- test_data[,1]
+
+	a <- ltn.precision.collection(cbind(actual, as.data.frame(predicted)))
+	a
+	result = rbind(result,a)
+}
+
+aggregate(. ~ TYPE, data= result, FUN="mean")
 
