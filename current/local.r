@@ -226,8 +226,8 @@ ltn.precision.collection <- function(data) {
 	return(result)
 }
 
-# path = '/home/johannes/code/masterproject/data/data.csv'
-path = '/Users/mariyaperchyk/Documents/python_hana/analysis/rData/data.csv'
+path = '/home/johannes/code/masterproject/data/data.csv'
+# path = '/Users/mariyaperchyk/Documents/python_hana/analysis/rData/data.csv'
 
 splitData <- ltn.splitCopurs(path)
 train_data = splitData$train_data

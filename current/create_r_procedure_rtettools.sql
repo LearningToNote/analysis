@@ -39,27 +39,30 @@ BEGIN
 
 	library(RTextTools)
 
-	#### down sampling
-#	true_pairs <- data[data$DDI != -1,]
-#	false_pairs <- data[data$DDI == -1,]
-#
-#	print(dim(true_pairs))
-#	print(dim(false_pairs))
-#
-#	false_downsampled_index <- sample(1:nrow(false_pairs), nrow(true_pairs))
-#	false_downsampled <- false_pairs[false_downsampled_index,]
-#
-#	data <- rbind(true_pairs, false_downsampled)
-
 	#### feature extraction
 
-	before_dtm <- create_matrix(data$BEFORE, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf)
+	before_dtm <- create_matrix(
+		data$BEFORE,
+		minWordLength=1,
+		removePunctuation=FALSE,
+		removeStopwords=FALSE,
+		weighting=tm::weightTfIdf)
 	o_before_dtm <- before_dtm[1,]
 	colnames(before_dtm) <- paste("b", colnames(before_dtm), sep = "_")
-	between_dtm <- create_matrix(data$BETWEEN, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf)
+	between_dtm <- create_matrix(
+		data$BETWEEN,
+		minWordLength=1,
+		removePunctuation=FALSE,
+		removeStopwords=FALSE,
+		weighting=tm::weightTfIdf)
 	o_between_dtm <- between_dtm[1,]
 	colnames(between_dtm) <- paste("i", colnames(between_dtm), sep = "_")
-	after_dtm <- create_matrix(data$AFTER, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf)
+	after_dtm <- create_matrix(
+		data$AFTER,
+		minWordLength=1,
+		removePunctuation=FALSE,
+		removeStopwords=FALSE,
+		weighting=tm::weightTfIdf)
 	o_after_dtm <- after_dtm[1,]
 	colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
 
@@ -135,9 +138,6 @@ BEGIN
 
 	library(RTextTools)
 
-	#### remove remaining NONE pairs
-	#data <- data[data$DDI != -1,]
-
 	#### retrieve dictionaries from binary classification
 	o_before_dtm <- unserialize(modeltable$MATRIX_BEFORE[[1]])
 	o_between_dtm <- unserialize(modeltable$MATRIX_BETWEEN[[1]])
@@ -148,11 +148,28 @@ BEGIN
 
 	#### feature extraction
 
-	before_dtm <- create_matrix(data$BEFORE, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf, originalMatrix=o_before_dtm)
+	before_dtm <- create_matrix(
+		data$BEFORE,
+		minWordLength=1,
+		removePunctuation=FALSE,
+		removeStopwords=FALSE,
+		weighting=tm::weightTfIdf, originalMatrix=o_before_dtm)
 	colnames(before_dtm) <- paste("b", colnames(before_dtm), sep = "_")
-	between_dtm <- create_matrix(data$BETWEEN, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf, originalMatrix=o_between_dtm)
+	between_dtm <- create_matrix(
+		data$BETWEEN,
+		minWordLength=1,
+		removePunctuation=FALSE,
+		removeStopwords=FALSE,
+		weighting=tm::weightTfIdf,
+		originalMatrix=o_between_dtm)
 	colnames(between_dtm) <- paste("i", colnames(between_dtm), sep = "_")
-	after_dtm <- create_matrix(data$AFTER, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf, originalMatrix=o_after_dtm)
+	after_dtm <- create_matrix(
+		data$AFTER,
+		minWordLength=1,
+		removePunctuation=FALSE,
+		removeStopwords=FALSE,
+		weighting=tm::weightTfIdf,
+		originalMatrix=o_after_dtm)
 	colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
 
 	p_before_dtm <- create_matrix(
@@ -226,11 +243,29 @@ BEGIN
 	svm.model.classes <- unserialize(modeltable$MODEL[[2]])
 
 	#### feature extraction
-	before_dtm <- create_matrix(data$BEFORE, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf, originalMatrix=o_before_dtm)
+	before_dtm <- create_matrix(
+		data$BEFORE,
+		minWordLength=1,
+		removePunctuation=FALSE,
+		removeStopwords=FALSE,
+		weighting=tm::weightTfIdf,
+		originalMatrix=o_before_dtm)
 	colnames(before_dtm) <- paste("b", colnames(before_dtm), sep = "_")
-	between_dtm <- create_matrix(data$BETWEEN, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf, originalMatrix=o_between_dtm)
+	between_dtm <- create_matrix(
+		data$BETWEEN,
+		minWordLength=1,
+		removePunctuation=FALSE,
+		removeStopwords=FALSE,
+		weighting=tm::weightTfIdf,
+		originalMatrix=o_between_dtm)
 	colnames(between_dtm) <- paste("i", colnames(between_dtm), sep = "_")
-	after_dtm <- create_matrix(data$AFTER, minWordLength=2, removeStopwords=FALSE, weighting=tm::weightTfIdf, originalMatrix=o_after_dtm)
+	after_dtm <- create_matrix(
+		data$AFTER,
+		minWordLength=1,
+		removePunctuation=FALSE,
+		removeStopwords=FALSE,
+		weighting=tm::weightTfIdf,
+		originalMatrix=o_after_dtm)
 	colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
 
 	p_before_dtm <- create_matrix(
