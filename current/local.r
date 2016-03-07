@@ -1,18 +1,21 @@
 
 library(RTextTools)
 
-ltn.splitCopurs <- function(path) {
-	data <- read.csv(path)
-
+ltn.downsample <- function(data) {
 	#### down sampling
 	true_pairs <- data[data$DDI != -1,]
 	false_pairs <- data[data$DDI == -1,]
-
 	false_downsampled_index <- sample(1:nrow(false_pairs), nrow(true_pairs) * 1.5)
 	false_downsampled <- false_pairs[false_downsampled_index,]
 
 	data <- rbind(true_pairs, false_downsampled)
-	data <- data[sample(nrow(data)),]
+	return(data)
+}
+
+ltn.splitCopurs <- function(path) {
+	data <- read.csv(path)
+
+	data <- ltn.downsample(data)
 
 	docs <- unique(data$DOC_ID)
 	testdocs <- sample(docs, 20)
@@ -20,6 +23,22 @@ ltn.splitCopurs <- function(path) {
 	testrows <- which(data$DOC_ID %in% testdocs)
 	test_data <- data[testrows,-1]
 	train_data <- data[-testrows,-1]
+
+	return (list(train_data=train_data, test_data=test_data))
+}
+
+ltn.sampleN <- function(data, n, seed) {
+	set.seed(seed)
+	docs <- unique(data$DOC_ID)
+	docs <- sample(docs, n+1)
+	train_docs <- docs[1:n]
+	test_docs <- docs[n+1]
+
+	train_rows <- which(data$DOC_ID %in% train_docs)
+	test_rows <- which(data$DOC_ID %in% test_docs)
+
+	train_data <- ltn.downsample(data[train_rows,-1])
+	test_data <- data[test_rows,-1]
 
 	return (list(train_data=train_data, test_data=test_data))
 }
@@ -36,7 +55,6 @@ ltn.train_binary <- function(data) {
 	after_dtm <- create_matrix(data$AFTER, minWordLength=1, removeStopwords=FALSE, weighting=tm::weightTfIdf, removePunctuation=FALSE)
 	o_after_dtm <- after_dtm[1,]
 	colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
-
 
 	p_before_dtm <- create_matrix(data$P_BEFORE, minWordLength=1, removeStopwords=FALSE)
 	o_p_before_dtm <- p_before_dtm[1,]
@@ -181,15 +199,20 @@ ltn.predict <- function(svm.model.binary, svm.model.classes, data, dictionaries)
 
 	results <- svm.pred.binary
 
-
 	true_index <- which(results$SVM_LABEL == 1)
-	container <- create_container(features[true_index,],labels=rep(0, length(true_index)),testSize=1:length(true_index),virgin=FALSE)
+	levels(results$SVM_LABEL) <- c(levels(results$SVM_LABEL), -1)
 
-	svm.pred.classes <- classify_models(container, svm.model.classes)
+	if (length(true_index) > 0) {
+		container <- create_container(features[true_index,],labels=rep(0, length(true_index)),testSize=1:length(true_index),virgin=FALSE)
+		svm.pred.classes <- classify_models(container, svm.model.classes)
+		levels(results$SVM_LABEL) <- c(levels(results$SVM_LABEL), levels(svm.pred.classes$SVM_LABEL))
 
-	levels(results$SVM_LABEL) <- c(levels(results$SVM_LABEL), levels(svm.pred.classes$SVM_LABEL), -1)
-	results[true_index,] <- svm.pred.classes
-	results[-true_index,] <- -1
+		results[true_index,] <- svm.pred.classes
+		results[-true_index,] <- -1
+	} else {
+		results[,1] <- -1
+	}
+
 	results <- droplevels(results)
 
 	return (results)
@@ -200,7 +223,11 @@ ltn.precision <- function(data, type) {
 	actual = data[,1]
 	tp = length(which(predicted == type & actual == type))
 	fp = length(which(predicted == type & actual != type))
-	return(tp/(tp+fp))
+	if (tp+fp > 0) {
+		return(tp/(tp+fp))
+	} else {
+		return(0.0)
+	}
 }
 
 ltn.recall <- function(data, type) {
@@ -208,16 +235,28 @@ ltn.recall <- function(data, type) {
 	actual = data[,1]
 	tp = length(which(predicted == type & actual == type))
 	fn = length(which(predicted != type & actual == type))
-	return(tp/(tp+fn))
+	print(data)
+	if (tp+fn > 0) {
+		return(tp/(tp+fn))
+		} else {
+			return(0)
+		}
 }
 
 ltn.precision.collection <- function(data) {
-	types = sort(unique(data[,1]))
+	# types cantained in the actual test data
+	types = sort(union(unique(data[,1]), unique(data[,2])))
 	result = matrix(ncol=4, nrow=0)
 	for (type in types) {
 		p = ltn.precision(data, type)
 		r = ltn.recall(data, type)
-		f = 2*p*r/(p+r)
+		print(p)
+		print(r)
+		if (p+r > 0) {
+			f = 2*p*r/(p+r)
+			} else {
+				f = 0
+			}
 
 		result <- rbind (result, c(type,round(p,2),round(r,2),round(f,2)))
 	}
@@ -226,38 +265,83 @@ ltn.precision.collection <- function(data) {
 	return(result)
 }
 
-path = '/home/johannes/code/masterproject/data/data.csv'
-# path = '/Users/mariyaperchyk/Documents/python_hana/analysis/rData/data.csv'
+# path = '/home/johannes/code/masterproject/data/data.csv'
+path = '/Users/mariyaperchyk/Documents/python_hana/analysis/rData/data.csv'
 
 
 ################MULTIPLE ITERATIONS
-result = matrix(ncol=4, nrow=0)
-colnames(result) <- c('TYPE', 'PRECISION', 'RECALL', 'F_MEASURE')
+ltn.iterations <- function(path) {
+	result = matrix(ncol=4, nrow=0)
+	colnames(result) <- c('TYPE', 'PRECISION', 'RECALL', 'F_MEASURE')
 
-for(i in 1:10){
-	print ("------------------------")
-	print (i)
-	splitData <- ltn.splitCopurs(path)
-	train_data = splitData$train_data
-	test_data = splitData$test_data
+	for(i in 1:10){
+		print ("------------------------")
+		print (i)
+		splitData <- ltn.splitCopurs(path)
+		train_data = splitData$train_data
+		test_data = splitData$test_data
 
-	print('training binary')
-	binary <- ltn.train_binary(train_data)
-	svm.model.binary = binary$model
-	dictionaries = binary$dictionaries
+		print('training binary')
+		binary <- ltn.train_binary(train_data)
+		svm.model.binary = binary$model
+		dictionaries = binary$dictionaries
 
-	print('training multiclass')
-	svm.model.classes <- ltn.train_multiclass(train_data, dictionaries)
+		print('training multiclass')
+		svm.model.classes <- ltn.train_multiclass(train_data, dictionaries)
 
-	print('predicting')
-	predicted <- ltn.predict(svm.model.binary, svm.model.classes, test_data[,-1], dictionaries)
-	predicted <- predicted[,1]
-	actual <- test_data[,1]
+		print('predicting')
+		predicted <- ltn.predict(svm.model.binary, svm.model.classes, test_data[,-1], dictionaries)
+		predicted <- predicted[,1]
+		actual <- test_data[,1]
 
-	a <- ltn.precision.collection(cbind(actual, as.data.frame(predicted)))
-	a
-	result = rbind(result,a)
+		a <- ltn.precision.collection(cbind(actual, as.data.frame(predicted)))
+		a
+		result = rbind(result,a)
+	}
+
+	return(aggregate(. ~ TYPE, data= result, FUN="mean"))
 }
 
-aggregate(. ~ TYPE, data= result, FUN="mean")
+############LEARNING CURVE
+ltn.learn <- function(path) {
+	data <- read.csv(path)
+	result = matrix(ncol=4, nrow=0)
+	colnames(result) <- c('TYPE', 'PRECISION', 'RECALL', 'F_MEASURE')
 
+	for(i in 1:10){
+
+		print ("------------------------")
+		splitData <- ltn.sampleN(data, i, 42)
+		train_data = splitData$train_data
+		test_data = splitData$test_data
+
+		print('training binary')
+		binary <- ltn.train_binary(train_data)
+		svm.model.binary = binary$model
+		dictionaries = binary$dictionaries
+
+		print('training multiclass')
+		svm.model.classes <- ltn.train_multiclass(train_data, dictionaries)
+
+		print('predicting')
+		predicted <- ltn.predict(svm.model.binary, svm.model.classes, test_data[,-1], dictionaries)
+		predicted <- predicted[,1]
+		actual <- test_data[,1]
+
+		a <- ltn.precision.collection(cbind(actual, as.data.frame(predicted)))
+		print(a)
+		result = rbind(result,a)
+	}
+	return(result)
+}
+
+plot_f1 <- function(a) {
+	plot(1:nrow(a[a$TYPE==-1,]),a[a$TYPE==-1,4],type="l",col="red",xlim=c(1,nrow(a[a$TYPE==-1,])),ylim=c(0,1))
+	lines(1:nrow(a[a$TYPE==137,]),a[a$TYPE==137,4],col="green",xlim=c(1,nrow(a[a$TYPE==-1,])),ylim=c(0,1))
+	lines(1:nrow(a[a$TYPE==138,]),a[a$TYPE==138,4],col="blue",xlim=c(1,nrow(a[a$TYPE==-1,])),ylim=c(0,1))
+	lines(1:nrow(a[a$TYPE==139,]),a[a$TYPE==139,4],col="black",xlim=c(1,nrow(a[a$TYPE==-1,])),ylim=c(0,1))
+	lines(1:nrow(a[a$TYPE==140,]),a[a$TYPE==140,4],col="yellow",xlim=c(1,nrow(a[a$TYPE==-1,])),ylim=c(0,1))
+}
+
+#a <- ltn.learn(path)
+#plot_f1(a)
