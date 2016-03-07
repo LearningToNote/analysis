@@ -46,13 +46,28 @@ ltn.sampleN <- function(data, n, seed) {
 ltn.train_binary <- function(data) {
 	#### feature extraction
 
-	before_dtm <- create_matrix(data$BEFORE, minWordLength=1, removeStopwords=FALSE, weighting=tm::weightTfIdf, removePunctuation=FALSE)
+	before_dtm <- create_matrix(
+		data$BEFORE,
+		minWordLength=1,
+		removeStopwords=FALSE,
+		weighting=tm::weightTfIdf,
+		removePunctuation=FALSE)
 	o_before_dtm <- before_dtm[1,]
 	colnames(before_dtm) <- paste("b", colnames(before_dtm), sep = "_")
-	between_dtm <- create_matrix(data$BETWEEN, minWordLength=1, removeStopwords=FALSE, weighting=tm::weightTfIdf, removePunctuation=FALSE)
+	between_dtm <- create_matrix(
+		data$BETWEEN,
+		minWordLength=1,
+		removeStopwords=FALSE,
+		weighting=tm::weightTfIdf,
+		removePunctuation=FALSE)
 	o_between_dtm <- between_dtm[1,]
 	colnames(between_dtm) <- paste("i", colnames(between_dtm), sep = "_")
-	after_dtm <- create_matrix(data$AFTER, minWordLength=1, removeStopwords=FALSE, weighting=tm::weightTfIdf, removePunctuation=FALSE)
+	after_dtm <- create_matrix(
+		data$AFTER,
+		minWordLength=1,
+		removeStopwords=FALSE,
+		weighting=tm::weightTfIdf,
+		removePunctuation=FALSE)
 	o_after_dtm <- after_dtm[1,]
 	colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
 
@@ -105,9 +120,20 @@ ltn.train_multiclass <- function(data,dictionaries) {
 	o_p_between_dtm=dictionaries$o_p_between_dtm
 	o_p_after_dtm=dictionaries$o_p_after_dtm
 
-	before_dtm <- create_matrix(data$BEFORE, minWordLength=1, removeStopwords=FALSE, weighting=tm::weightTfIdf, removePunctuation=FALSE, originalMatrix=o_before_dtm)
+	before_dtm <- create_matrix(
+		data$BEFORE,
+		minWordLength=1,
+		removeStopwords=FALSE,
+		weighting=tm::weightTfIdf,
+		removePunctuation=FALSE,
+		originalMatrix=o_before_dtm)
 	colnames(before_dtm) <- paste("b", colnames(before_dtm), sep = "_")
-	between_dtm <- create_matrix(data$BETWEEN, minWordLength=1, removeStopwords=FALSE, weighting=tm::weightTfIdf, removePunctuation=FALSE, originalMatrix=o_between_dtm)
+	between_dtm <- create_matrix(
+		data$BETWEEN, minWordLength=1,
+		removeStopwords=FALSE,
+		weighting=tm::weightTfIdf,
+		removePunctuation=FALSE,
+		originalMatrix=o_between_dtm)
 	colnames(between_dtm) <- paste("i", colnames(between_dtm), sep = "_")
 	after_dtm <- create_matrix(data$AFTER, minWordLength=1, removeStopwords=FALSE, weighting=tm::weightTfIdf, removePunctuation=FALSE, originalMatrix=o_after_dtm)
 	colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
@@ -157,11 +183,29 @@ ltn.predict <- function(svm.model.binary, svm.model.classes, data, dictionaries)
 	o_p_between_dtm=dictionaries$o_p_between_dtm
 	o_p_after_dtm=dictionaries$o_p_after_dtm
 
-	before_dtm <- create_matrix(data$BEFORE, minWordLength=1, removeStopwords=FALSE, weighting=tm::weightTfIdf, removePunctuation=FALSE, originalMatrix=o_before_dtm)
+	before_dtm <- create_matrix(
+		data$BEFORE,
+		minWordLength=1,
+		removeStopwords=FALSE,
+		weighting=tm::weightTfIdf,
+		removePunctuation=FALSE,
+		originalMatrix=o_before_dtm)
 	colnames(before_dtm) <- paste("b", colnames(before_dtm), sep = "_")
-	between_dtm <- create_matrix(data$BETWEEN, minWordLength=1, removeStopwords=FALSE, weighting=tm::weightTfIdf, removePunctuation=FALSE, originalMatrix=o_between_dtm)
+	between_dtm <- create_matrix(
+		data$BETWEEN,
+		minWordLength=1,
+		removeStopwords=FALSE,
+		weighting=tm::weightTfIdf,
+		removePunctuation=FALSE,
+		originalMatrix=o_between_dtm)
 	colnames(between_dtm) <- paste("i", colnames(between_dtm), sep = "_")
-	after_dtm <- create_matrix(data$AFTER, minWordLength=1, removeStopwords=FALSE, weighting=tm::weightTfIdf, removePunctuation=FALSE, originalMatrix=o_after_dtm)
+	after_dtm <- create_matrix(
+		data$AFTER,
+		minWordLength=1,
+		removeStopwords=FALSE,
+		weighting=tm::weightTfIdf,
+		removePunctuation=FALSE,
+		originalMatrix=o_after_dtm)
 	colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
 
 
