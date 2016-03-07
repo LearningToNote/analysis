@@ -288,16 +288,20 @@ BEGIN
 
 	results <- svm.pred.binary
 
-	#### multi class classification
 	true_index <- which(results$SVM_LABEL == 1)
-	container <- create_container(features[true_index,],labels=rep(0, length(true_index)),testSize=1:length(true_index),virgin=FALSE)
+	levels(results$SVM_LABEL) <- c(levels(results$SVM_LABEL), -1)
 
-	svm.pred.classes <- classify_models(container, svm.model.classes)
+	if (length(true_index) > 0) {
+		container <- create_container(features[true_index,],labels=rep(0, length(true_index)),testSize=1:length(true_index),virgin=FALSE)
+		svm.pred.classes <- classify_models(container, svm.model.classes)
+		levels(results$SVM_LABEL) <- c(levels(results$SVM_LABEL), levels(svm.pred.classes$SVM_LABEL))
 
-	## fix result
-	levels(results$SVM_LABEL) <- c(levels(results$SVM_LABEL), levels(svm.pred.classes$SVM_LABEL), -1)
-	results[true_index,] <- svm.pred.classes
-	results[-true_index,] <- -1
+		results[true_index,] <- svm.pred.classes
+		results[-true_index,] <- -1
+	} else {
+		results[,1] <- -1
+	}
+
 	results <- droplevels(results)
 
 
