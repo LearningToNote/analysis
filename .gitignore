@@ -1,4 +1,5 @@
 venv/
 secrets.json
-.RData
+*.RData
 .Rhistory
+*.DS_STORE
