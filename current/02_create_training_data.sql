@@ -9,11 +9,14 @@ BEGIN
 	#### down sampling
 	true_pairs <- data[data$DDI != -1,-1]
 	false_pairs <- data[data$DDI == -1,-1]
+	if (nrow(true_pairs) > 0) {
+		false_downsampled_index <- sample(1:nrow(false_pairs), min(nrow(false_pairs), nrow(true_pairs)*1.5) )
+		false_downsampled <- false_pairs[false_downsampled_index,]
+		train_data <- rbind(true_pairs, false_downsampled)
+	} else {
+		train_data <- false_pairs
+	}
 
-	false_downsampled_index <- sample(1:nrow(false_pairs), nrow(true_pairs) * 1.5)
-	false_downsampled <- false_pairs[false_downsampled_index,]
-
-	train_data <- rbind(true_pairs, false_downsampled)
 END;
 
 DROP PROCEDURE CREATE_TRAINING_DATA;
@@ -45,11 +48,11 @@ unsampled_data =
 			CASE WHEN POSITION < 0 THEN TOKEN ELSE NULL END AS T1,
 			CASE WHEN POSITION = 0 THEN TOKEN ELSE NULL END AS T2,
 			CASE WHEN POSITION > 0 THEN TOKEN ELSE NULL END AS T3,
-	
+
 			CASE WHEN POSITION < 0 THEN POS ELSE NULL END AS P1,
 			CASE WHEN POSITION = 0 THEN POS ELSE NULL END AS P2,
 			CASE WHEN POSITION > 0 THEN POS ELSE NULL END AS P3,
-	
+
 			COUNTER,
 			POSITION
 			FROM (
@@ -94,7 +97,7 @@ unsampled_data =
 				AND FTI.TA_COUNTER <> FTI1.TA_COUNTER
 				AND FTI.TA_COUNTER <> FTI2.TA_COUNTER
 				AND FTI1.TA_COUNTER < FTI2.TA_COUNTER
-						
+
 				ORDER BY FTI.TA_COUNTER
 			)
 			WHERE TOKEN NOT IN (SELECT STOPWORD FROM LEARNING_TO_NOTE.STOPWORDS)
@@ -103,7 +106,7 @@ unsampled_data =
 		ORDER BY DOC_ID, E1_ID, E2_ID, POSITION
 	)
 	GROUP BY DOC_ID, E1_ID, E2_ID, DDI, E1_TYPE, E2_TYPE, CHAR_DIST, WORD_DIST;
-	
+
 CALL DOWNSAMPLE_R(:unsampled_data, :train_data);
 
 END;
