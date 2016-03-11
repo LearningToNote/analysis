@@ -2,7 +2,7 @@ SET SCHEMA LTN_DEVELOP;
 
 
 DROP PROCEDURE R_TRAIN_BINARY;
-CREATE PROCEDURE R_TRAIN_BINARY(IN data T_TRAIN_DATA, OUT model T_MODELS)
+CREATE PROCEDURE R_TRAIN_BINARY(IN data T_TRAIN_DATA, IN task_id T_TASK_ID, OUT model T_MODELS)
 LANGUAGE RLANG AS
 BEGIN
 	########################
@@ -117,7 +117,7 @@ END;
 
 
 DROP PROCEDURE R_TRAIN_CLASSES;
-CREATE PROCEDURE R_TRAIN_CLASSES(IN data T_TRAIN_DATA, IN modeltable T_MODELS, OUT model T_MODELS)
+CREATE PROCEDURE R_TRAIN_CLASSES(IN data T_TRAIN_DATA, IN modeltable T_MODELS, IN task_id T_TASK_ID, OUT model T_MODELS)
 LANGUAGE RLANG AS
 BEGIN
 	########################
@@ -205,6 +205,7 @@ BEGIN
 
 
 	model <- data.frame(
+		TASK_ID=task_id[1,1],
 		ID = c(2),
 		DESCRIPTION = c('multi class classification'),
 		MODEL = generateRobjColumn(svm.model.classes),
