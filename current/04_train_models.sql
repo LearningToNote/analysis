@@ -42,7 +42,7 @@ BEGIN
         P_AFTER
     FROM :data;
 
-    models = SELECT * FROM MODELS;
+    models = SELECT * FROM MODELS WHERE TASK_ID=:task_id;
     CALL R_PREDICT(:test_data, :models, T_RESULTS);
 
     DELETE FROM RESULTS;
