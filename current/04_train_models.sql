@@ -8,7 +8,7 @@ BEGIN
 DECLARE binary_model LTN_DEVELOP.T_MODELS;
 DECLARE multiclass_model LTN_DEVELOP.T_MODELS;
 
-    CALL CREATE_TRAINING_DATA(:task_id, 'DDI-IMPORTER', -1, :train_data);
+    CALL LTN_FEATURES(:task_id, -1, :train_data);
     task_id_table = select :task_id AS NUMBER from DUMMY;
 
     CALL R_TRAIN_BINARY(:train_data, :task_id_table, :binary_model);
@@ -25,7 +25,7 @@ DROP PROCEDURE LTN_PREDICT;
 CREATE PROCEDURE LTN_PREDICT(IN task_id INT)
 LANGUAGE SQLSCRIPT AS
 BEGIN
-    CALL CREATE_TRAINING_DATA(:task_id, 'DDI-TEST_DATA', -1, :data);
+    CALL LTN_FEATURES_BY_USER(:task_id, 'DDI-TEST_DATA', -1, :data);
 
     test_data = select
         E1_ID,

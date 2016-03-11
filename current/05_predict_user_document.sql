@@ -69,7 +69,7 @@ data =
 				WHERE UD.ID = :ud_id
 				AND (FTI.TA_TYPE <> 'punctuation' OR FTI.TA_TOKEN = ':' OR FTI.TA_TOKEN = ',' OR FTI.TA_TOKEN = ';')
 				AND FTI.TA_TYPE <> 'number'
-				AND FTI.TA_TOKEN NOT LIKE '%!%%' ESCAPE '!'		
+				AND FTI.TA_TOKEN NOT LIKE '%!%%' ESCAPE '!'
 				AND E1.ID < E2.ID
 				AND FTI1.TA_SENTENCE = FTI2.TA_SENTENCE
 				AND FTI.TA_SENTENCE = FTI1.TA_SENTENCE
