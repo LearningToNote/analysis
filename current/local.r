@@ -295,9 +295,9 @@ ltn.recall <- function(data, type) {
 	fn = length(which(predicted != type & actual == type))
 	if (tp+fn > 0) {
 		return(tp/(tp+fn))
-		} else {
-			return(0.0)
-		}
+	} else {
+		return(0.0)
+	}
 }
 
 ltn.precision.collection <- function(data) {
@@ -309,9 +309,9 @@ ltn.precision.collection <- function(data) {
 		r = ltn.recall(data, type)
 		if (p+r > 0) {
 			f = 2*p*r/(p+r)
-			} else {
-				f = 0/1
-			}
+		} else {
+			f = 0/1
+		}
 		result <- rbind (result, c(type,round(p,2),round(r,2),round(f,2)))
 	}
 	result <- as.data.frame(result)

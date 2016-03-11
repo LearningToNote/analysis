@@ -71,7 +71,11 @@ BEGIN
         actual = data[,1]
         tp = length(which(predicted == type & actual == type))
         fp = length(which(predicted == type & actual != type))
-        return(tp/(tp+fp))
+        if (tp+fp > 0) {
+            return(tp/(tp+fp))
+        } else {
+            return(0.0)
+        }
     }
 
     recall <- function(data, type) {
@@ -79,7 +83,11 @@ BEGIN
         actual = data[,1]
         tp = length(which(predicted == type & actual == type))
         fn = length(which(predicted != type & actual == type))
-        return(tp/(tp+fn))
+        if (tp+fn > 0) {
+            return(tp/(tp+fn))
+        } else {
+            return(0.0)
+        }
     }
 
     precision.collection <- function(data) {
@@ -88,8 +96,11 @@ BEGIN
         for (type in types) {
             p = precision(data, type)
             r = recall(data, type)
-            f = 2*p*r/(p+r)
-
+            if (p+r > 0) {
+                f = 2*p*r/(p+r)
+            } else {
+                f = 0/1
+            }
             result <- rbind (result, c(type,round(p,2),round(r,2),round(f,2)))
         }
         result <- as.data.frame(result)
