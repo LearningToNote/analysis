@@ -1,11 +1,21 @@
 SET SCHEMA LTN_DEVELOP;
 
 DROP PROCEDURE DOWNSAMPLE_R;
-CREATE PROCEDURE DOWNSAMPLE_R(IN data T_TRAIN_DATA_DOCS, OUT train_data T_TRAIN_DATA)
+CREATE PROCEDURE DOWNSAMPLE_R(IN data T_TRAIN_DATA_DOCS, IN max_size_table T_INT, OUT train_data T_TRAIN_DATA)
 LANGUAGE RLANG AS
 BEGIN
 	set.seed(as.integer(format(Sys.time(), "%s")))
 
+	max_size = max_size_table[1,1]
+
+	if (max_size != -1) {
+		docs <- unique(data$DOC_ID)
+		if (length(docs) > max_size) {
+			docs <- sample(docs, max_size)
+			rows <- which(data$DOC_ID %in% docs)
+			data <- data[rows,]
+		}
+	}
 	#### down sampling
 	true_pairs <- data[data$DDI != -1,-1]
 	false_pairs <- data[data$DDI == -1,-1]
@@ -14,10 +24,11 @@ BEGIN
 	false_downsampled <- false_pairs[false_downsampled_index,]
 
 	train_data <- rbind(true_pairs, false_downsampled)
+
 END;
 
 DROP PROCEDURE CREATE_TRAINING_DATA;
-CREATE PROCEDURE CREATE_TRAINING_DATA(IN task_id INT, IN username VARCHAR(255), OUT train_data T_TRAIN_DATA)
+CREATE PROCEDURE CREATE_TRAINING_DATA(IN task_id INT, IN username VARCHAR(255), IN max_size INT, OUT train_data T_TRAIN_DATA)
 LANGUAGE SQLSCRIPT AS
 BEGIN
 DECLARE FTI LTN_DEVELOP.T_INDEX;
@@ -104,11 +115,12 @@ unsampled_data =
 	)
 	GROUP BY DOC_ID, E1_ID, E2_ID, DDI, E1_TYPE, E2_TYPE, CHAR_DIST, WORD_DIST;
 
-CALL DOWNSAMPLE_R(:unsampled_data, :train_data);
+max_size_table = select :max_size AS NUMBER from DUMMY;
+CALL DOWNSAMPLE_R(:unsampled_data, :max_size_table, :train_data);
 
 END;
 
 
-CALL CREATE_TRAINING_DATA(1, 'DDI-IMPORTER', ?);
-CALL CREATE_TRAINING_DATA(1, 'DDI-TEST_DATA', ?);
+CALL CREATE_TRAINING_DATA(1, 'DDI-IMPORTER', -1, ?);
+CALL CREATE_TRAINING_DATA(1, 'DDI-TEST_DATA', -1, ?);
 
