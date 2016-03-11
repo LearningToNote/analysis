@@ -30,12 +30,13 @@ ltn.splitCopurs <- function(path) {
 	return (list(train_data=train_data, test_data=test_data))
 }
 
-ltn.sampleN <- function(data, n, seed) {
+ltn.sampleN <- function(data, n, seed, number_of_test_docs) {
 	set.seed(seed)
 	docs <- unique(data$DOC_ID)
-	docs <- sample(docs, n+1)
+
+	docs <- sample(docs, n+number_of_test_docs)
 	train_docs <- docs[1:n]
-	test_docs <- docs[n+1]
+	test_docs <- docs[(n+1):(n+number_of_test_docs)]
 
 	train_rows <- which(data$DOC_ID %in% train_docs)
 	test_rows <- which(data$DOC_ID %in% test_docs)
@@ -354,14 +355,15 @@ ltn.iterations <- function(path,iterations) {
 }
 
 ############LEARNING CURVE
-ltn.learn <- function(data,number_of_iterations, seed) {
+ltn.learn <- function(data,number_of_iterations, seed, steps) {
 	result = matrix(ncol=5, nrow=0)
 	colnames(result) <- c('TYPE', 'PRECISION', 'RECALL', 'F_MEASURE','i')
 
-	for(i in 1:number_of_iterations){
+	for(i in seq(2,number_of_iterations+1, by=steps)){
 
 		print ("------------------------")
-		splitData <- ltn.sampleN(data, i, seed)
+		print(i)
+		splitData <- ltn.sampleN(data, i, seed, 20)
 		train_data = splitData$train_data
 		test_data = splitData$test_data
 
@@ -393,26 +395,26 @@ ltn.learn <- function(data,number_of_iterations, seed) {
 	return(result)
 }
 
-ltn.aggregate_learn <- function(path, iterations_per_cycle, cycles,seed) {
-	# cycles = how often should we execute the learning curve to aggregate
+ltn.aggregate_learn <- function(path, iterations_per_cycle, cycles, seed) {
 	# iterations_per_cycle = how many docs at max we use to learn
+	# cycles = how often should we execute the learning curve to aggregate
 	data <- read.csv(path)
 	result = matrix(ncol=5, nrow=0)
 	colnames(result) <- c('TYPE', 'PRECISION', 'RECALL', 'F_MEASURE','i')
 
 	for(i in 1:cycles){
-		a <- ltn.learn(data,iterations_per_cycle,i+seed)
+		a <- ltn.learn(data,iterations_per_cycle,i+seed, 10)
 		result <-rbind(result, a)
 	}
 	return(aggregate(. ~ TYPE+i, data= result, FUN="mean"))
 }
 
-plot_f1 <- function(a) {
-	plot(1:nrow(a[a$TYPE==-1,]),a[a$TYPE==-1,4],type="l",col="red",xlim=c(1,nrow(a[a$TYPE==-1,])),ylim=c(0,1))
-	lines(1:nrow(a[a$TYPE==137,]),a[a$TYPE==137,4],col="green",xlim=c(1,nrow(a[a$TYPE==-1,])),ylim=c(0,1))
-	lines(1:nrow(a[a$TYPE==138,]),a[a$TYPE==138,4],col="blue",xlim=c(1,nrow(a[a$TYPE==-1,])),ylim=c(0,1))
-	lines(1:nrow(a[a$TYPE==139,]),a[a$TYPE==139,4],col="black",xlim=c(1,nrow(a[a$TYPE==-1,])),ylim=c(0,1))
-	lines(1:nrow(a[a$TYPE==140,]),a[a$TYPE==140,4],col="yellow",xlim=c(1,nrow(a[a$TYPE==-1,])),ylim=c(0,1))
+plot_f1 <- function(a, column) {
+	plot(a[a$TYPE==-1,2],a[a$TYPE==-1,column],type="l",col="red",xlim=c(min(a$i),max(a$i)),ylim=c(0,1))
+	lines(a[a$TYPE==137,2],a[a$TYPE==137,column],col="green",xlim=c(min(a$i),max(a$i)),ylim=c(0,1))
+	lines(a[a$TYPE==138,2],a[a$TYPE==138,column],col="blue",xlim=c(min(a$i),max(a$i)),ylim=c(0,1))
+	lines(a[a$TYPE==139,2],a[a$TYPE==139,column],col="black",xlim=c(min(a$i),max(a$i)),ylim=c(0,1))
+	lines(a[a$TYPE==140,2],a[a$TYPE==140,column],col="yellow",xlim=c(min(a$i),max(a$i)),ylim=c(0,1))
 }
 
 #a <- ltn.learn(path,2,102)
