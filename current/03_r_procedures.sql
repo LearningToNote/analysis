@@ -137,89 +137,104 @@ BEGIN
     }
 	########################
 
-	library(RTextTools)
+	if (is.null(modeltable$MODEL)) {
+		model <- data.frame(
+			TASK_ID=task_id[1,1],
+			ID = c(2),
+			DESCRIPTION = c('empty multiclass model'),
+			MODEL = generateRobjColumn(NULL),
+			MATRIX_BEFORE = generateRobjColumn(NULL),
+			MATRIX_BETWEEN = generateRobjColumn(NULL),
+			MATRIX_AFTER = generateRobjColumn(NULL),
+			MATRIX_P_BEFORE = generateRobjColumn(NULL),
+			MATRIX_P_BETWEEN = generateRobjColumn(NULL),
+			MATRIX_P_AFTER = generateRobjColumn(NULL)
+		)
+	} else {
 
-	#### retrieve dictionaries from binary classification
-	o_before_dtm <- unserialize(modeltable$MATRIX_BEFORE[[1]])
-	o_between_dtm <- unserialize(modeltable$MATRIX_BETWEEN[[1]])
-	o_after_dtm <- unserialize(modeltable$MATRIX_AFTER[[1]])
-	o_p_before_dtm <- unserialize(modeltable$MATRIX_P_BEFORE[[1]])
-	o_p_between_dtm <- unserialize(modeltable$MATRIX_P_BETWEEN[[1]])
-	o_p_after_dtm <- unserialize(modeltable$MATRIX_P_AFTER[[1]])
+		library(RTextTools)
 
-	#### feature extraction
+		#### retrieve dictionaries from binary classification
+		o_before_dtm <- unserialize(modeltable$MATRIX_BEFORE[[1]])
+		o_between_dtm <- unserialize(modeltable$MATRIX_BETWEEN[[1]])
+		o_after_dtm <- unserialize(modeltable$MATRIX_AFTER[[1]])
+		o_p_before_dtm <- unserialize(modeltable$MATRIX_P_BEFORE[[1]])
+		o_p_between_dtm <- unserialize(modeltable$MATRIX_P_BETWEEN[[1]])
+		o_p_after_dtm <- unserialize(modeltable$MATRIX_P_AFTER[[1]])
 
-	before_dtm <- create_matrix(
-		data$BEFORE,
-		minWordLength=1,
-		removePunctuation=FALSE,
-		removeStopwords=FALSE,
-		weighting=tm::weightTfIdf, originalMatrix=o_before_dtm)
-	colnames(before_dtm) <- paste("b", colnames(before_dtm), sep = "_")
-	between_dtm <- create_matrix(
-		data$BETWEEN,
-		minWordLength=1,
-		removePunctuation=FALSE,
-		removeStopwords=FALSE,
-		weighting=tm::weightTfIdf,
-		originalMatrix=o_between_dtm)
-	colnames(between_dtm) <- paste("i", colnames(between_dtm), sep = "_")
-	after_dtm <- create_matrix(
-		data$AFTER,
-		minWordLength=1,
-		removePunctuation=FALSE,
-		removeStopwords=FALSE,
-		weighting=tm::weightTfIdf,
-		originalMatrix=o_after_dtm)
-	colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
+		#### feature extraction
 
-	p_before_dtm <- create_matrix(
-		data$P_BEFORE,
-		minWordLength=1,
-		removeStopwords=FALSE,
-		originalMatrix=o_p_before_dtm)
-	colnames(p_before_dtm) <- paste("pb", colnames(p_before_dtm), sep = "_")
+		before_dtm <- create_matrix(
+			data$BEFORE,
+			minWordLength=1,
+			removePunctuation=FALSE,
+			removeStopwords=FALSE,
+			weighting=tm::weightTfIdf, originalMatrix=o_before_dtm)
+		colnames(before_dtm) <- paste("b", colnames(before_dtm), sep = "_")
+		between_dtm <- create_matrix(
+			data$BETWEEN,
+			minWordLength=1,
+			removePunctuation=FALSE,
+			removeStopwords=FALSE,
+			weighting=tm::weightTfIdf,
+			originalMatrix=o_between_dtm)
+		colnames(between_dtm) <- paste("i", colnames(between_dtm), sep = "_")
+		after_dtm <- create_matrix(
+			data$AFTER,
+			minWordLength=1,
+			removePunctuation=FALSE,
+			removeStopwords=FALSE,
+			weighting=tm::weightTfIdf,
+			originalMatrix=o_after_dtm)
+		colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
 
-	p_between_dtm <- create_matrix(
-		data$P_BETWEEN,
-		minWordLength=1,
-		removeStopwords=FALSE,
-		originalMatrix=o_p_between_dtm)
-	colnames(p_between_dtm) <- paste("pi", colnames(p_between_dtm), sep = "_")
+		p_before_dtm <- create_matrix(
+			data$P_BEFORE,
+			minWordLength=1,
+			removeStopwords=FALSE,
+			originalMatrix=o_p_before_dtm)
+		colnames(p_before_dtm) <- paste("pb", colnames(p_before_dtm), sep = "_")
 
-	p_after_dtm <- create_matrix(
-		data$P_AFTER,
-		minWordLength=1,
-		removeStopwords=FALSE,
-		originalMatrix=o_p_after_dtm)
-	colnames(p_after_dtm) <- paste("pa", colnames(p_after_dtm), sep = "_")
+		p_between_dtm <- create_matrix(
+			data$P_BETWEEN,
+			minWordLength=1,
+			removeStopwords=FALSE,
+			originalMatrix=o_p_between_dtm)
+		colnames(p_between_dtm) <- paste("pi", colnames(p_between_dtm), sep = "_")
 
-	features <- cbind(
-		before_dtm, between_dtm, after_dtm,
-		p_before_dtm, p_between_dtm, p_after_dtm,
-		data$E1_TYPE, data$E2_TYPE,
-		data$CHAR_DIST, data$WORD_DIST)
+		p_after_dtm <- create_matrix(
+			data$P_AFTER,
+			minWordLength=1,
+			removeStopwords=FALSE,
+			originalMatrix=o_p_after_dtm)
+		colnames(p_after_dtm) <- paste("pa", colnames(p_after_dtm), sep = "_")
 
-	ddi <- data$DDI
+		features <- cbind(
+			before_dtm, between_dtm, after_dtm,
+			p_before_dtm, p_between_dtm, p_after_dtm,
+			data$E1_TYPE, data$E2_TYPE,
+			data$CHAR_DIST, data$WORD_DIST)
 
-	container <- create_container(features,ddi,trainSize=1:nrow(data),virgin=FALSE)
+		ddi <- data$DDI
 
-	svm.model.classes <- train_models(container, algorithms=c("SVM"), method = "C-classification")
+		container <- create_container(features,ddi,trainSize=1:nrow(data),virgin=FALSE)
+
+		svm.model.classes <- train_models(container, algorithms=c("SVM"), method = "C-classification")
 
 
-	model <- data.frame(
-		TASK_ID=task_id[1,1],
-		ID = c(2),
-		DESCRIPTION = c('multi class classification'),
-		MODEL = generateRobjColumn(svm.model.classes),
-		MATRIX_BEFORE = generateRobjColumn(NULL),
-		MATRIX_BETWEEN = generateRobjColumn(NULL),
-		MATRIX_AFTER = generateRobjColumn(NULL),
-		MATRIX_P_BEFORE = generateRobjColumn(NULL),
-		MATRIX_P_BETWEEN = generateRobjColumn(NULL),
-		MATRIX_P_AFTER = generateRobjColumn(NULL)
-	)
-
+		model <- data.frame(
+			TASK_ID=task_id[1,1],
+			ID = c(2),
+			DESCRIPTION = c('multi class classification'),
+			MODEL = generateRobjColumn(svm.model.classes),
+			MATRIX_BEFORE = generateRobjColumn(NULL),
+			MATRIX_BETWEEN = generateRobjColumn(NULL),
+			MATRIX_AFTER = generateRobjColumn(NULL),
+			MATRIX_P_BEFORE = generateRobjColumn(NULL),
+			MATRIX_P_BETWEEN = generateRobjColumn(NULL),
+			MATRIX_P_AFTER = generateRobjColumn(NULL)
+		)
+	}
 END;
 
 
@@ -229,7 +244,7 @@ CREATE PROCEDURE R_PREDICT(IN data T_PREDICT_INPUT, IN modeltable T_MODELS, OUT 
 LANGUAGE RLANG AS
 BEGIN
 
-	if(nrow(data) > 0) {
+	if(nrow(data) > 0 & modeltable$MODEL[[1]] != NULL) {
 
 		library(RTextTools)
 
