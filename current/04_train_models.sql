@@ -17,7 +17,7 @@ DECLARE multiclass_model LTN_DEVELOP.T_MODELS;
     CALL R_TRAIN_BINARY(:train_data, :task_id_table, :binary_model);
     CALL R_TRAIN_CLASSES(:train_data, :binary_model, :task_id_table, :multiclass_model);
 
-    DELETE FROM MODELS;
+    DELETE FROM MODELS WHERE TASK_ID=:task_id;
     INSERT INTO MODELS SELECT * FROM :binary_model;
     INSERT INTO MODELS SELECT * FROM :multiclass_model;
 
@@ -57,56 +57,69 @@ CALL LTN_PREDICT(1);
 SELECT * FROM RESULTS;
 
 
--- DROP TYPE COMPARISON_T;
--- CREATE TYPE COMPARISON_T AS TABLE (ACTUAL INT, PREDICTED INT);
 
--- DROP TABLE COMPARISON;
--- CREATE COLUMN TABLE COMPARISON LIKE COMPARISON_T;
--- INSERT INTO COMPARISON
---     SELECT TD.DDI AS ACTUAL, R.DDI AS PREDICTED
---     FROM TD_CLASSES_TEST TD
---     JOIN RESULTS R ON TD.E1_ID = R.E1_ID AND TD.E2_ID = R.E2_ID;
+----------------------------------------------------------
+----------------------------------------------------------
 
 
 
--- CREATE TYPE PRF_TABLE_T AS TABLE (T INT, PRECISION DOUBLE, RECALL DOUBLE, F_MEASURE DOUBLE);
--- DROP PROCEDURE PRF;
--- CREATE PROCEDURE PRF(IN data COMPARISON_T, OUT prf PRF_TABLE_T)
--- LANGUAGE RLANG AS
--- BEGIN
---     precision <- function(data, type) {
---         predicted = data[,2]
---         actual = data[,1]
---         tp = length(which(predicted == type & actual == type))
---         fp = length(which(predicted == type & actual != type))
---         return(tp/(tp+fp))
---     }
+DROP PROCEDURE LTN_PRF;
+CREATE PROCEDURE LTN_PRF(IN data COMPARISON_T, OUT evaluation EVALUATION_T)
+LANGUAGE RLANG AS
+BEGIN
+    precision <- function(data, type) {
+        predicted = data[,2]
+        actual = data[,1]
+        tp = length(which(predicted == type & actual == type))
+        fp = length(which(predicted == type & actual != type))
+        return(tp/(tp+fp))
+    }
 
---     recall <- function(data, type) {
---         predicted = data[,2]
---         actual = data[,1]
---         tp = length(which(predicted == type & actual == type))
---         fn = length(which(predicted != type & actual == type))
---         return(tp/(tp+fn))
---     }
+    recall <- function(data, type) {
+        predicted = data[,2]
+        actual = data[,1]
+        tp = length(which(predicted == type & actual == type))
+        fn = length(which(predicted != type & actual == type))
+        return(tp/(tp+fn))
+    }
 
---     precision.collection <- function(data) {
---         types = sort(unique(data[,1]))
---         result = matrix(ncol=4, nrow=0)
---         for (type in types) {
---             p = precision(data, type)
---             r = recall(data, type)
---             f = 2*p*r/(p+r)
+    precision.collection <- function(data) {
+        types = sort(unique(data[,1]))
+        result = matrix(ncol=4, nrow=0)
+        for (type in types) {
+            p = precision(data, type)
+            r = recall(data, type)
+            f = 2*p*r/(p+r)
 
---             result <- rbind (result, c(type,round(p,2),round(r,2),round(f,2)))
---         }
---         result <- as.data.frame(result)
---         colnames(result) <- c('T', 'PRECISION', 'RECALL', 'F_MEASURE')
---         return(result)
---     }
+            result <- rbind (result, c(type,round(p,2),round(r,2),round(f,2)))
+        }
+        result <- as.data.frame(result)
+        colnames(result) <- c('T', 'PRECISION', 'RECALL', 'F_MEASURE')
+        return(result)
+    }
 
---     prf = precision.collection(data)
--- END;
+    evaluation = precision.collection(data)
+END;
 
--- CALL PRF(COMPARISON, ?)
+
+
+DROP PROCEDURE LTN_EVALUATION;
+CREATE PROCEDURE LTN_EVALUATION(IN task_id INT, OUT evaluation EVALUATION_T)
+LANGUAGE SQLSCRIPT AS
+BEGIN
+
+    CALL CREATE_TRAINING_DATA(:task_id, 'DDI-TEST_DATA', :test_data);
+
+    comparison = SELECT TD.DDI AS ACTUAL, R.DDI AS PREDICTED
+        FROM TD_CLASSES_TEST TD
+        JOIN RESULTS R ON TD.E1_ID = R.E1_ID AND TD.E2_ID = R.E2_ID;
+
+    CALL LTN_PRF(:comparison, :evaluation)
+END;
+
+CALL LTN_EVALUATION(1, ?)
+
+
+
+
 
