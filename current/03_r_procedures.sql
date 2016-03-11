@@ -111,6 +111,7 @@ BEGIN
 			MATRIX_P_BEFORE = generateRobjColumn(NULL),
 			MATRIX_P_BETWEEN = generateRobjColumn(NULL),
 			MATRIX_P_AFTER = generateRobjColumn(NULL)
+		)
 	}
 
 END;
