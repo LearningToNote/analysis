@@ -90,6 +90,7 @@ BEGIN
 		svm.model.binary <- train_models(container, algorithms=c("SVM"), method = "C-classification")
 
 		model <- data.frame(
+			TASK_ID=task_id[1,1],
 			ID = c(1),
 			DESCRIPTION = c('binary classification'),
 			MODEL = generateRobjColumn(svm.model.binary),
@@ -102,6 +103,7 @@ BEGIN
 		)
 	} else {
 		model <- data.frame(
+			TASK_ID=task_id[1,1],
 			ID = c(1),
 			DESCRIPTION = c('empty binary model'),
 			MODEL = generateRobjColumn(NULL),
