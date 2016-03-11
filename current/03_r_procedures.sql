@@ -137,7 +137,7 @@ BEGIN
     }
 	########################
 
-	if (is.null(modeltable$MODEL)) {
+	if (is.null(modeltable$MODEL[[1]])) {
 		model <- data.frame(
 			TASK_ID=task_id[1,1],
 			ID = c(2),
@@ -244,7 +244,7 @@ CREATE PROCEDURE R_PREDICT(IN data T_PREDICT_INPUT, IN modeltable T_MODELS, OUT 
 LANGUAGE RLANG AS
 BEGIN
 
-	if(nrow(data) > 0 & modeltable$MODEL[[1]] != NULL) {
+	if(nrow(data) > 0 && !is.null(modeltable$MODEL[[1]])) {
 
 		library(RTextTools)
 
