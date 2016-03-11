@@ -21,83 +21,98 @@ BEGIN
 
 	library(RTextTools)
 
-	#### feature extraction
-
-	before_dtm <- create_matrix(
-		data$BEFORE,
-		minWordLength=1,
-		removePunctuation=FALSE,
-		removeStopwords=FALSE,
-		weighting=tm::weightTfIdf)
-	o_before_dtm <- before_dtm[1,]
-	colnames(before_dtm) <- paste("b", colnames(before_dtm), sep = "_")
-	between_dtm <- create_matrix(
-		data$BETWEEN,
-		minWordLength=1,
-		removePunctuation=FALSE,
-		removeStopwords=FALSE,
-		weighting=tm::weightTfIdf)
-	o_between_dtm <- between_dtm[1,]
-	colnames(between_dtm) <- paste("i", colnames(between_dtm), sep = "_")
-	after_dtm <- create_matrix(
-		data$AFTER,
-		minWordLength=1,
-		removePunctuation=FALSE,
-		removeStopwords=FALSE,
-		weighting=tm::weightTfIdf)
-	o_after_dtm <- after_dtm[1,]
-	colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
-
-	p_before_dtm <- create_matrix(
-		data$P_BEFORE,
-		minWordLength=1,
-		removeStopwords=FALSE)
-	o_p_before_dtm <- p_before_dtm[1,]
-	colnames(p_before_dtm) <- paste("pb", colnames(p_before_dtm), sep = "_")
-
-	p_between_dtm <- create_matrix(
-		data$P_BETWEEN,
-		minWordLength=1,
-		removeStopwords=FALSE)
-	o_p_between_dtm <- p_between_dtm[1,]
-	colnames(p_between_dtm) <- paste("pi", colnames(p_between_dtm), sep = "_")
-
-	p_after_dtm <- create_matrix(
-		data$P_AFTER,
-		minWordLength=1,
-		removeStopwords=FALSE)
-	o_p_after_dtm <- p_after_dtm[1,]
-	colnames(p_after_dtm) <- paste("pa", colnames(p_after_dtm), sep = "_")
-
-	features <- cbind(
-		before_dtm, between_dtm, after_dtm,
-		p_before_dtm, p_between_dtm, p_after_dtm,
-		data$E1_TYPE, data$E2_TYPE,
-		data$CHAR_DIST, data$WORD_DIST)
-
-
+	########################
 	ddi <- data$DDI
 
-	#### binarize target values
+	if (length(unique(ddi)) > 1) {
 
-	ddi[ddi != -1] <- 1
-	ddi[ddi == -1] <- 0
-	container <- create_container(features,ddi,trainSize=1:nrow(data),virgin=FALSE)
+		#### binarize target values
 
-	svm.model.binary <- train_models(container, algorithms=c("SVM"), method = "C-classification")
+		ddi[ddi != -1] <- 1
+		ddi[ddi == -1] <- 0
 
-	model <- data.frame(
-		TASK_ID=task_id[1,1],
-		ID = c(1),
-		DESCRIPTION = c('binary classification'),
-		MODEL = generateRobjColumn(svm.model.binary),
-		MATRIX_BEFORE = generateRobjColumn(o_before_dtm),
-		MATRIX_BETWEEN = generateRobjColumn(o_between_dtm),
-		MATRIX_AFTER = generateRobjColumn(o_after_dtm),
-		MATRIX_P_BEFORE = generateRobjColumn(o_p_before_dtm),
-		MATRIX_P_BETWEEN = generateRobjColumn(o_p_between_dtm),
-		MATRIX_P_AFTER = generateRobjColumn(o_p_after_dtm)
-	)
+		#### feature extraction
+
+		before_dtm <- create_matrix(
+			data$BEFORE,
+			minWordLength=1,
+			removePunctuation=FALSE,
+			removeStopwords=FALSE,
+			weighting=tm::weightTfIdf)
+		o_before_dtm <- before_dtm[1,]
+		colnames(before_dtm) <- paste("b", colnames(before_dtm), sep = "_")
+		between_dtm <- create_matrix(
+			data$BETWEEN,
+			minWordLength=1,
+			removePunctuation=FALSE,
+			removeStopwords=FALSE,
+			weighting=tm::weightTfIdf)
+		o_between_dtm <- between_dtm[1,]
+		colnames(between_dtm) <- paste("i", colnames(between_dtm), sep = "_")
+		after_dtm <- create_matrix(
+			data$AFTER,
+			minWordLength=1,
+			removePunctuation=FALSE,
+			removeStopwords=FALSE,
+			weighting=tm::weightTfIdf)
+		o_after_dtm <- after_dtm[1,]
+		colnames(after_dtm) <- paste("a", colnames(after_dtm), sep = "_")
+
+		p_before_dtm <- create_matrix(
+			data$P_BEFORE,
+			minWordLength=1,
+			removeStopwords=FALSE)
+		o_p_before_dtm <- p_before_dtm[1,]
+		colnames(p_before_dtm) <- paste("pb", colnames(p_before_dtm), sep = "_")
+
+		p_between_dtm <- create_matrix(
+			data$P_BETWEEN,
+			minWordLength=1,
+			removeStopwords=FALSE)
+		o_p_between_dtm <- p_between_dtm[1,]
+		colnames(p_between_dtm) <- paste("pi", colnames(p_between_dtm), sep = "_")
+
+		p_after_dtm <- create_matrix(
+			data$P_AFTER,
+			minWordLength=1,
+			removeStopwords=FALSE)
+		o_p_after_dtm <- p_after_dtm[1,]
+		colnames(p_after_dtm) <- paste("pa", colnames(p_after_dtm), sep = "_")
+
+		features <- cbind(
+			before_dtm, between_dtm, after_dtm,
+			p_before_dtm, p_between_dtm, p_after_dtm,
+			data$E1_TYPE, data$E2_TYPE,
+			data$CHAR_DIST, data$WORD_DIST)
+
+		container <- create_container(features,ddi,trainSize=1:nrow(data),virgin=FALSE)
+
+		svm.model.binary <- train_models(container, algorithms=c("SVM"), method = "C-classification")
+
+		model <- data.frame(
+			ID = c(1),
+			DESCRIPTION = c('binary classification'),
+			MODEL = generateRobjColumn(svm.model.binary),
+			MATRIX_BEFORE = generateRobjColumn(o_before_dtm),
+			MATRIX_BETWEEN = generateRobjColumn(o_between_dtm),
+			MATRIX_AFTER = generateRobjColumn(o_after_dtm),
+			MATRIX_P_BEFORE = generateRobjColumn(o_p_before_dtm),
+			MATRIX_P_BETWEEN = generateRobjColumn(o_p_between_dtm),
+			MATRIX_P_AFTER = generateRobjColumn(o_p_after_dtm)
+		)
+	} else {
+		model <- data.frame(
+			ID = c(1),
+			DESCRIPTION = c('empty binary model'),
+			MODEL = generateRobjColumn(NULL),
+			MATRIX_BEFORE = generateRobjColumn(NULL),
+			MATRIX_BETWEEN = generateRobjColumn(NULL),
+			MATRIX_AFTER = generateRobjColumn(NULL),
+			MATRIX_P_BEFORE = generateRobjColumn(NULL),
+			MATRIX_P_BETWEEN = generateRobjColumn(NULL),
+			MATRIX_P_AFTER = generateRobjColumn(NULL)
+	}
+
 END;
 
 

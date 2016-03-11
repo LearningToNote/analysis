@@ -19,11 +19,13 @@ BEGIN
 	#### down sampling
 	true_pairs <- data[data$DDI != -1,-1]
 	false_pairs <- data[data$DDI == -1,-1]
-
-	false_downsampled_index <- sample(1:nrow(false_pairs), nrow(true_pairs) * 1.5)
-	false_downsampled <- false_pairs[false_downsampled_index,]
-
-	train_data <- rbind(true_pairs, false_downsampled)
+	if (nrow(true_pairs) > 0) {
+		false_downsampled_index <- sample(1:nrow(false_pairs), min(nrow(false_pairs), nrow(true_pairs)*1.5) )
+		false_downsampled <- false_pairs[false_downsampled_index,]
+		train_data <- rbind(true_pairs, false_downsampled)
+	} else {
+		train_data <- false_pairs
+	}
 
 END;
 
