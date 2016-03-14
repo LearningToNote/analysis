@@ -99,7 +99,8 @@ BEGIN
 			MATRIX_AFTER = generateRobjColumn(o_after_dtm),
 			MATRIX_P_BEFORE = generateRobjColumn(o_p_before_dtm),
 			MATRIX_P_BETWEEN = generateRobjColumn(o_p_between_dtm),
-			MATRIX_P_AFTER = generateRobjColumn(o_p_after_dtm)
+			MATRIX_P_AFTER = generateRobjColumn(o_p_after_dtm),
+			CREATED_AT = generateRobjColumn(strftime(Sys.time(),"%Y-%m-%d %H:%M:%S"))
 		)
 	} else {
 		model <- data.frame(
@@ -112,7 +113,8 @@ BEGIN
 			MATRIX_AFTER = generateRobjColumn(NULL),
 			MATRIX_P_BEFORE = generateRobjColumn(NULL),
 			MATRIX_P_BETWEEN = generateRobjColumn(NULL),
-			MATRIX_P_AFTER = generateRobjColumn(NULL)
+			MATRIX_P_AFTER = generateRobjColumn(NULL),
+			CREATED_AT = generateRobjColumn(strftime(Sys.time(),"%Y-%m-%d %H:%M:%S"))
 		)
 	}
 
@@ -148,7 +150,8 @@ BEGIN
 			MATRIX_AFTER = generateRobjColumn(NULL),
 			MATRIX_P_BEFORE = generateRobjColumn(NULL),
 			MATRIX_P_BETWEEN = generateRobjColumn(NULL),
-			MATRIX_P_AFTER = generateRobjColumn(NULL)
+			MATRIX_P_AFTER = generateRobjColumn(NULL),
+			CREATED_AT = generateRobjColumn(strftime(Sys.time(),"%Y-%m-%d %H:%M:%S"))
 		)
 	} else {
 
@@ -232,7 +235,8 @@ BEGIN
 			MATRIX_AFTER = generateRobjColumn(NULL),
 			MATRIX_P_BEFORE = generateRobjColumn(NULL),
 			MATRIX_P_BETWEEN = generateRobjColumn(NULL),
-			MATRIX_P_AFTER = generateRobjColumn(NULL)
+			MATRIX_P_AFTER = generateRobjColumn(NULL),
+			CREATED_AT = generateRobjColumn(strftime(Sys.time(),"%Y-%m-%d %H:%M:%S"))
 		)
 	}
 END;

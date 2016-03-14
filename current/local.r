@@ -58,7 +58,6 @@ ltn.train_binary <- function(data) {
 	ddi[ddi == -1] <- 0
 
 	#### feature extraction
-
 	before_dtm <- create_matrix(
 		data$BEFORE,
 		minWordLength=1,
@@ -300,40 +299,76 @@ ltn.recall <- function(data, type) {
 	}
 }
 
+ltn.micro_average <- function(data,type) {
+	predicted = data[,2]
+	actual = data[,1]
+	tp = length(which(predicted == type & actual == type))
+	fp = length(which(predicted == type & actual != type))
+	fn = length(which(predicted != type & actual == type))
+	tn = length(which(predicted != type & actual != type))
+	return (cbind(tp,fp,fn,tn))
+}
+
 ltn.precision.collection <- function(data) {
 	# types cantained in the actual test data
 	types = sort(unique(c(data[,1],data[,2])))
-	result = matrix(ncol=4, nrow=0)
+	result = matrix(ncol=8, nrow=0)
 	for (type in types) {
 		p = ltn.precision(data, type)
 		r = ltn.recall(data, type)
 		if (p+r > 0) {
 			f = 2*p*r/(p+r)
+<<<<<<< Updated upstream
 		} else {
 			f = 0/1
 		}
 		result <- rbind (result, c(type,round(p,2),round(r,2),round(f,2)))
+=======
+			} else {
+				f = 0/1
+			}
+		micro = ltn.micro_average(data, type)
+		result <- rbind (result, c(type,round(p,2),round(r,2),round(f,2), micro))
+>>>>>>> Stashed changes
 	}
 	result <- as.data.frame(result)
-	colnames(result) <- c('TYPE', 'PRECISION', 'RECALL', 'F_MEASURE')
+	colnames(result) <- c('TYPE', 'PRECISION', 'RECALL', 'F_MEASURE', 'TP', 'FP', 'FN', 'TN')
 	return(result)
+}
+
+ltn.micro.collection <- function(data) {
+
+	precision = sum(data$TP) / (sum(data$TP)+sum(data$FP))
+	recall = sum(data$TP) / (sum(data$TP)+sum(data$FN))
+	return(cbind(precision, recall))
 }
 
 # path = '/home/johannes/code/masterproject/data/data.csv'
 path = '/Users/mariyaperchyk/Documents/python_hana/analysis/rData/data.csv'
+train_path = '/Users/mariyaperchyk/Documents/python_hana/analysis/rData/all_train_data.csv'
+test_path = '/Users/mariyaperchyk/Documents/python_hana/analysis/rData/all_test_data.csv'
 
 
 ################MULTIPLE ITERATIONS
-ltn.iterations <- function(path,iterations) {
-	result = matrix(ncol=4, nrow=0)
-	colnames(result) <- c('TYPE', 'PRECISION', 'RECALL', 'F_MEASURE')
+ltn.iterations <- function(train_path, test_path, use_testset=FALSE, iterations) {
+	all_predictions = matrix(ncol=2, nrow=0)
+	colnames(all_predictions) <- c('ACTUAL', 'PREDICTED')
+
+	result = matrix(ncol=8, nrow=0)
+	micro = matrix(ncol=2, nrow=0)
+	colnames(result) <- c('TYPE', 'PRECISION', 'RECALL', 'F_MEASURE', 'TP', 'FP', 'FN', 'TN')
 
 	for(i in 1:iterations){
 		print ("------------------------")
 		print (i)
-		splitData <- ltn.splitCopurs(path)
-		train_data = splitData$train_data
-		test_data = splitData$test_data
+		if(!use_testset) {
+			splitData <- ltn.splitCopurs(train_path)
+			train_data = splitData$train_data
+			test_data = splitData$test_data
+		} else {
+			train_data = ltn.downsample(read.csv(train_path))
+			test_data = read.csv(test_path)
+		}
 
 		print('training binary')
 		binary <- ltn.train_binary(train_data)
@@ -347,11 +382,21 @@ ltn.iterations <- function(path,iterations) {
 		predicted <- ltn.predict(svm.model.binary, svm.model.classes, test_data[,-1], dictionaries)
 		predicted <- as.numeric(levels(predicted[,1]))[predicted[,1]]
 		actual <- test_data[,1]
-		a <- ltn.precision.collection(cbind(actual,predicted))
-		result = rbind(result,a)
-	}
 
-	return(aggregate(. ~ TYPE, data= result, FUN="mean"))
+		all_predictions <- rbind(all_predictions,cbind(actual, predicted))
+
+		a <- ltn.precision.collection(cbind(actual,predicted))
+		micro_collection = ltn.micro.collection(a[,c(5:8)])
+		print(a)
+		print(micro_collection)
+
+		micro = rbind(micro, micro_collection)
+		result = rbind(result,a)
+
+	}
+	aggr = aggregate(. ~ TYPE, data= result[,-c(5:8)], FUN="mean")
+	aggr_micro = colMeans(micro)
+	return(list(perClassAggregation=aggr,microAggregation=aggr_micro))
 }
 
 ############LEARNING CURVE
@@ -416,6 +461,8 @@ plot_f1 <- function(a, column) {
 	lines(a[a$TYPE==139,2],a[a$TYPE==139,column],col="black",xlim=c(min(a$i),max(a$i)),ylim=c(0,1))
 	lines(a[a$TYPE==140,2],a[a$TYPE==140,column],col="yellow",xlim=c(min(a$i),max(a$i)),ylim=c(0,1))
 }
+
+# collection = ltn.iterations(train_path, test_path, FALSE, 2)
 
 #a <- ltn.learn(path,2,102)
 #plot_f1(a)
